@@ -10,6 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.damo.partyschool.branch.Branch;
 import com.damo.partyschool.branch.BranchRepository;
+import com.damo.partyschool.exam.Exam;
+import com.damo.partyschool.exam.ExamRepository;
+import com.damo.partyschool.exam.ExamStatus;
+import com.damo.partyschool.learning.LearningContent;
+import com.damo.partyschool.learning.LearningRepository;
 import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
@@ -21,14 +26,20 @@ public class DataSeeder implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
+    private final LearningRepository learningRepository;
+    private final ExamRepository examRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(
             UserRepository userRepository,
             BranchRepository branchRepository,
+            LearningRepository learningRepository,
+            ExamRepository examRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
+        this.learningRepository = learningRepository;
+        this.examRepository = examRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -49,7 +60,20 @@ public class DataSeeder implements ApplicationRunner {
         userRepository.save(user("secretary", "sec123", "支部书记", Role.SECRETARY, branch.getId()));
         userRepository.save(user("member", "mem123", "普通党员", Role.MEMBER, branch.getId()));
 
-        log.info("Seeded demo branch id={} and users admin/secretary/member", branch.getId());
+        learningRepository.save(learning("党章学习导读", "党章总纲与党员义务概要", null));
+        learningRepository.save(learning("支部工作条例要点", "党支部工作条例精读摘要", branch.getId()));
+        learningRepository.save(learning("廉洁自律准则", "党员廉洁自律基本规范", branch.getId()));
+
+        Exam exam = new Exam();
+        exam.setTitle("党纪基础知识测验");
+        exam.setStatus(ExamStatus.OPEN);
+        exam.setBranchId(branch.getId());
+        examRepository.save(exam);
+
+        log.info(
+                "Seeded demo branch id={}, users, {} learning items, 1 exam",
+                branch.getId(),
+                learningRepository.count());
     }
 
     private User user(String username, String rawPassword, String name, Role role, Long branchId) {
@@ -60,5 +84,13 @@ public class DataSeeder implements ApplicationRunner {
         user.setRole(role);
         user.setBranchId(branchId);
         return user;
+    }
+
+    private LearningContent learning(String title, String summary, Long branchId) {
+        LearningContent content = new LearningContent();
+        content.setTitle(title);
+        content.setSummary(summary);
+        content.setBranchId(branchId);
+        return content;
     }
 }
