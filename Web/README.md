@@ -65,3 +65,19 @@ docker compose down -v     # 停止并删除数据卷（清空数据库）
 ### 环境变量
 
 复制 `.env.example` 为 `.env` 并填写密钥。**切勿将 `.env` 提交到 Git**；DeepSeek 等 API Key 仅通过环境变量注入。
+
+## Agent（FastAPI）
+
+```bash
+cd Web/agent
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+pip install -r requirements.txt
+pytest tests/test_health.py -v
+uvicorn app.main:app --reload --port 8000
+```
+
+- Health: `GET http://localhost:8000/health` → `{"status":"ok"}`
+- 启动时会尝试 `ensure_collections`（`kb_personal` / `kb_learning`）；Milvus 不可达时仅打日志，不影响 `/health`
+- `EMBEDDING_DIM` 默认 `1536`（见 `.env.example`）；无 `EMBEDDING_API_KEY` 时使用确定性伪向量（仅用于打通链路）
