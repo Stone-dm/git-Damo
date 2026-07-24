@@ -169,3 +169,52 @@ def test_chat_rag_degrades_on_empty_retrieval(client):
     )
     assert resp.status_code == 200
     assert "reply" in resp.json()
+
+
+def test_recommend_accepts_backend_null_branch_and_blank_query(client):
+    """Backend may send null branch_id / blank query when member has no branch or omits query."""
+    c, store = client
+    store.search.return_value = []
+    resp = c.post(
+        "/recommend",
+        json={"user_id": "3", "branch_id": None, "query": ""},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "items" in body
+    assert len(body["items"]) >= 1
+
+
+def test_ingest_accepts_backend_null_ids(client):
+    c, store = client
+    resp = c.post(
+        "/ingest",
+        json={
+            "document_id": "9",
+            "kb_type": "LEARNING",
+            "text": "联调对齐字段：支部学习材料正文。",
+            "user_id": "1",
+            "branch_id": None,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    args, _ = store.upsert.call_args
+    assert args[0] == COLLECTION_LEARNING
+    assert args[1][0]["branch_id"] == ""
+
+
+def test_chat_accepts_backend_null_branch(client):
+    c, _store = client
+    resp = c.post(
+        "/chat",
+        json={
+            "user_id": "3",
+            "branch_id": None,
+            "role": "MEMBER",
+            "message": "帮我总结要点",
+            "text": "测试文档内容",
+            "history": [],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()["reply"]) > 0

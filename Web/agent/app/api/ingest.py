@@ -6,8 +6,9 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_validator
 
+from app.api.payload_compat import empty_if_none
 from app.config import get_settings
 from app.rag.chunking import chunk_text
 from app.rag.embeddings import EmbeddingClient
@@ -25,6 +26,10 @@ class IngestRequest(BaseModel):
     user_id: str = ""
     branch_id: str = ""
 
+    @field_validator("user_id", "branch_id", mode="before")
+    @classmethod
+    def coerce_optional_ids(cls, value: object) -> str:
+        return empty_if_none(value)
 
 class IngestResponse(BaseModel):
     status: str = "ok"

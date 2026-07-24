@@ -81,3 +81,78 @@ uvicorn app.main:app --reload --port 8000
 - Health: `GET http://localhost:8000/health` → `{"status":"ok"}`
 - 启动时会尝试 `ensure_collections`（`kb_personal` / `kb_learning`）；Milvus 不可达时仅打日志，不影响 `/health`
 - `EMBEDDING_DIM` 默认 `1536`（见 `.env.example`）；无 `EMBEDDING_API_KEY` 时使用确定性伪向量（仅用于打通链路）
+
+### Agent API（Backend 转发契约）
+
+| 方法 | 路径 | 关键请求字段（snake_case） |
+|------|------|---------------------------|
+| POST | `/ingest` | `document_id`, `kb_type`(`PERSONAL`/`LEARNING`), `text`, `user_id`, `branch_id` |
+| POST | `/recommend` | `user_id`, `branch_id`, `query`（空则默认「推荐学习」） |
+| POST | `/chat` | `user_id`, `branch_id`, `role`, `message`, `document_id?`, `text?`, `history?` |
+
+Backend `AgentClient` / `AgentPayloads` 会把 `null` 的 `branch_id`/`user_id` 规范成 `""`，避免 FastAPI 422。
+
+## Backend ↔ Agent 联调
+
+### 1. 启动依赖
+
+```bash
+cd Web
+cp .env.example .env   # 如尚未复制
+docker compose up -d
+# 等待 MySQL healthy、Milvus 可连
+docker compose ps
+```
+
+### 2. 启动 Agent（端口 8000）
+
+```bash
+cd Web/agent
+.venv\Scripts\activate   # Windows
+uvicorn app.main:app --reload --port 8000
+# 另开终端冒烟：
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/recommend -H "Content-Type: application/json" -d "{\"user_id\":\"3\",\"branch_id\":\"1\",\"query\":\"推荐学习\"}"
+curl -X POST http://localhost:8000/chat -H "Content-Type: application/json" -d "{\"user_id\":\"3\",\"branch_id\":\"1\",\"role\":\"MEMBER\",\"message\":\"帮我总结要点\",\"text\":\"测试文档内容\"}"
+```
+
+### 3. 启动 Backend（端口 8080）
+
+```bash
+cd Web/backend
+# 默认 app.agent.base-url=http://localhost:8000（可用 AGENT_BASE_URL 覆盖）
+mvn spring-boot:run
+```
+
+### 4. 业务链路（member）
+
+```bash
+# 登录
+curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"member\",\"password\":\"mem123\"}"
+# 将返回的 data.token 设为 TOKEN
+
+# 上传 LEARNING → 期望 syncStatus=SYNCED（Agent/Milvus 可用时）
+curl -s -X POST http://localhost:8080/api/knowledge/upload -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"title\":\"联调材料\",\"kbType\":\"LEARNING\",\"content\":\"党的二十大报告学习要点……\",\"sourceName\":\"demo.txt\"}"
+
+# 推荐 / 对话 → 期望非空 items / reply（无 Key 时为降级文案）
+curl -s -X POST http://localhost:8080/api/agent/recommend -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"query\":\"推荐学习\"}"
+curl -s -X POST http://localhost:8080/api/agent/chat -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"message\":\"帮我总结要点\",\"text\":\"坚持党的全面领导，推进高质量发展。\"}"
+```
+
+### 5. 可选：自动化联调 IT
+
+MySQL + Agent 均已启动时：
+
+```bash
+cd Web/backend
+# Windows PowerShell:
+$env:AGENT_IT="true"; mvn -q test "-Dtest=AgentIntegrationIT"
+```
+
+未设置 `AGENT_IT=true` 时该测试跳过。日常用 H2 + 字段契约单测即可：
+
+```bash
+mvn -q test "-Dtest=AgentPayloadSerializationTest,KnowledgeControllerTest"
+cd ../agent
+.venv\Scripts\python.exe -m pytest tests/test_ingest_recommend.py -v
+```

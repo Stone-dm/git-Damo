@@ -5,18 +5,28 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_validator
 
+from app.api.payload_compat import empty_if_none, recommend_query
 from app.recommend.chain import recommend as run_recommend
 
 router = APIRouter()
 
 
 class RecommendRequest(BaseModel):
-    user_id: str
-    branch_id: str
-    query: str = Field(..., min_length=1)
+    user_id: str = ""
+    branch_id: str = ""
+    query: str = "推荐学习"
 
+    @field_validator("user_id", "branch_id", mode="before")
+    @classmethod
+    def coerce_ids(cls, value: object) -> str:
+        return empty_if_none(value)
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def coerce_query(cls, value: object) -> str:
+        return recommend_query(value)
 
 class RecommendItem(BaseModel):
     title: str

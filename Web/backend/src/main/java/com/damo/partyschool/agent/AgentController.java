@@ -30,8 +30,8 @@ public class AgentController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody(required = false) RecommendRequest request) {
         requirePrincipal(principal);
-        String query = request != null && request.query() != null ? request.query() : "";
-        RecommendPayload payload = new RecommendPayload(
+        String query = request != null ? request.query() : null;
+        RecommendPayload payload = AgentPayloads.recommend(
                 String.valueOf(principal.getId()),
                 principal.getBranchId() == null ? null : String.valueOf(principal.getBranchId()),
                 query);
@@ -46,7 +46,7 @@ public class AgentController {
         if (request.documentId() != null) {
             knowledgeService.assertCanAccessDocument(principal, request.documentId());
         }
-        ChatPayload payload = new ChatPayload(
+        ChatPayload payload = AgentPayloads.chat(
                 String.valueOf(principal.getId()),
                 principal.getBranchId() == null ? null : String.valueOf(principal.getBranchId()),
                 principal.getRole().name(),

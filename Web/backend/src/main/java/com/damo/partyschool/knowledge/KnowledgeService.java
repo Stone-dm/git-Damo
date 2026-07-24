@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.damo.partyschool.agent.AgentClient;
+import com.damo.partyschool.agent.AgentPayloads;
 import com.damo.partyschool.agent.AgentUnavailableException;
 import com.damo.partyschool.agent.IngestPayload;
 import com.damo.partyschool.auth.UserPrincipal;
@@ -35,7 +36,7 @@ public class KnowledgeService {
         doc.setSyncStatus(SyncStatus.PENDING);
         doc = kbDocumentRepository.save(doc);
 
-        IngestPayload payload = new IngestPayload(
+        IngestPayload payload = AgentPayloads.ingest(
                 String.valueOf(doc.getId()),
                 doc.getKbType().name(),
                 request.content(),
