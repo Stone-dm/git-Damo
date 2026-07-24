@@ -56,6 +56,7 @@ curl http://localhost:8000/health
 - 启动时尝试 `ensure_collections`（`kb_personal` / `kb_learning`）；Milvus 不可达时仅打日志，不影响 `/health`
 - `EMBEDDING_DIM` 默认 `1536`（见 `.env.example`）；无 `EMBEDDING_API_KEY` 时使用确定性伪向量（仅用于打通链路）
 - 无 `DEEPSEEK_API_KEY` 时推荐/助手走**降级文案**（链路仍可通）
+- **Agent 共享密钥（可选）：** 设置 `AGENT_SHARED_TOKEN` 后，`/ingest`、`/recommend`、`/chat` 要求请求头 `X-Agent-Token` 与之匹配；未设置时 Agent 保持开放并打启动告警（本地开发）。Backend 通过 `app.agent.shared-token` / 同一环境变量自动带上该头。`/health` 始终免校验。
 
 ### 3. Backend（Maven Spring Boot，端口 8080）
 

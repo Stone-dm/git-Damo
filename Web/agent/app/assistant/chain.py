@@ -8,6 +8,7 @@ from typing import Any
 from app.config import Settings, get_settings
 from app.llm.deepseek import DeepSeekClient
 from app.rag.embeddings import EmbeddingClient
+from app.rag.filters import learning_filter_expr
 from app.recommend.chain import retrieve_context, _safe_search
 from app.stores.milvus_store import (
     COLLECTION_LEARNING,
@@ -41,7 +42,7 @@ def _fetch_document_chunks(
         store,
         COLLECTION_LEARNING,
         vector,
-        f'branch_id == "{branch_id}" and document_id == "{document_id}"',
+        learning_filter_expr(branch_id, document_id=document_id),
         top_k=8,
     )
     return [*personal, *learning]

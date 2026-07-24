@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
 
+    # Optional shared secret; empty = open agent surface (dev). Backend sends X-Agent-Token.
+    agent_shared_token: str = ""
+
     # Collection names (constants exposed via settings for convenience)
     kb_personal: str = "kb_personal"
     kb_learning: str = "kb_learning"

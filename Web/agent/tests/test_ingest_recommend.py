@@ -218,3 +218,79 @@ def test_chat_accepts_backend_null_branch(client):
     )
     assert resp.status_code == 200, resp.text
     assert len(resp.json()["reply"]) > 0
+
+
+def test_recommend_learning_filter_includes_global_branch(client):
+    c, store = client
+    store.search.return_value = []
+    resp = c.post(
+        "/recommend",
+        json={"user_id": "3", "branch_id": "1", "query": "推荐学习"},
+    )
+    assert resp.status_code == 200
+    assert store.search.call_count == 2
+    learning_call = store.search.call_args_list[1]
+    assert learning_call.args[0] == COLLECTION_LEARNING
+    filter_expr = learning_call.args[2]
+    assert 'branch_id == "1"' in filter_expr
+    assert 'branch_id == ""' in filter_expr
+
+
+def test_chat_document_admin_empty_branch_skips_branch_filter(client):
+    c, store = client
+    store.search.return_value = []
+    resp = c.post(
+        "/chat",
+        json={
+            "user_id": "1",
+            "branch_id": "",
+            "role": "ADMIN",
+            "message": "总结这份材料",
+            "document_id": "99",
+            "text": None,
+            "history": [],
+        },
+    )
+    assert resp.status_code == 200
+    learning_calls = [
+        call for call in store.search.call_args_list if call.args[0] == COLLECTION_LEARNING
+    ]
+    assert learning_calls
+    assert learning_calls[0].args[2] == 'document_id == "99"'
+
+
+def test_agent_token_required_when_configured(mock_store):
+    settings = Settings(
+        deepseek_api_key="",
+        embedding_api_key="",
+        embedding_dim=8,
+        agent_shared_token="secret-token",
+    )
+    get_settings.cache_clear()
+    with (
+        patch("app.main.get_settings", return_value=settings),
+        patch("app.main.MilvusStore", return_value=mock_store),
+        patch("app.config.get_settings", return_value=settings),
+        patch("app.security.get_settings", return_value=settings),
+        patch("app.api.ingest.get_settings", return_value=settings),
+        patch("app.recommend.chain.get_settings", return_value=settings),
+        patch("app.assistant.chain.get_settings", return_value=settings),
+        patch("app.rag.embeddings.get_settings", return_value=settings),
+        patch("app.llm.deepseek.get_settings", return_value=settings),
+    ):
+        with TestClient(app) as c:
+            c.app.state.milvus = mock_store
+            denied = c.post(
+                "/recommend",
+                json={"user_id": "3", "branch_id": "1", "query": "推荐"},
+            )
+            assert denied.status_code == 401
+            ok = c.post(
+                "/recommend",
+                headers={"X-Agent-Token": "secret-token"},
+                json={"user_id": "3", "branch_id": "1", "query": "推荐"},
+            )
+            assert ok.status_code == 200
+            health = c.get("/health")
+            assert health.status_code == 200
+    get_settings.cache_clear()

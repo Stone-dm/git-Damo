@@ -8,8 +8,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface KbDocumentRepository extends JpaRepository<KbDocument, Long> {
 
-    List<KbDocument> findByBranchIdOrderByCreatedAtDesc(Long branchId);
-
     @Query("""
             select d from KbDocument d
             where d.ownerUserId = :userId

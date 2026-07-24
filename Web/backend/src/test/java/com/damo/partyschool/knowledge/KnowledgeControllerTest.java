@@ -76,6 +76,45 @@ class KnowledgeControllerTest {
     }
 
     @Test
+    void secretaryListExcludesOtherMembersPersonalDocs() throws Exception {
+        String memberToken = login("member", "mem123");
+        String secretaryToken = login("secretary", "sec123");
+
+        mockMvc.perform(post("/api/knowledge/upload")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title":"党员私人文档",
+                                  "kbType":"PERSONAL",
+                                  "content":"仅本人可见的个人笔记",
+                                  "sourceName":"personal.txt"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/knowledge/upload")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title":"支部公开材料",
+                                  "kbType":"LEARNING",
+                                  "content":"支部共享学习材料",
+                                  "sourceName":"branch.txt"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/knowledge")
+                        .header("Authorization", "Bearer " + secretaryToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[?(@.title=='支部公开材料')]").exists())
+                .andExpect(jsonPath("$.data[?(@.title=='党员私人文档')]").doesNotExist());
+    }
+
+    @Test
     void recommendReturns503WhenAgentDown() throws Exception {
         String token = login("member", "mem123");
 

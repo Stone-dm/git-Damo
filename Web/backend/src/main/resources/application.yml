@@ -17,3 +17,4 @@ app:
     expire-ms: 86400000
   agent:
     base-url: ${AGENT_BASE_URL:http://localhost:8000}
+    shared-token: ${AGENT_SHARED_TOKEN:}

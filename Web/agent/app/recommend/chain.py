@@ -8,6 +8,7 @@ from typing import Any
 from app.config import Settings, get_settings
 from app.llm.deepseek import DeepSeekClient
 from app.rag.embeddings import EmbeddingClient
+from app.rag.filters import learning_filter_expr
 from app.stores.milvus_store import (
     COLLECTION_LEARNING,
     COLLECTION_PERSONAL,
@@ -65,7 +66,7 @@ def retrieve_context(
         store,
         COLLECTION_LEARNING,
         vector,
-        f'branch_id == "{branch_id}"',
+        learning_filter_expr(branch_id),
         top_k=top_k,
     )
     return [*personal, *learning]

@@ -59,18 +59,11 @@ public class KnowledgeService {
         if (actor.getRole() == Role.ADMIN) {
             docs = kbDocumentRepository.findAll();
             docs.sort(Comparator.comparing(KbDocument::getCreatedAt).reversed());
-        } else if (actor.getRole() == Role.SECRETARY) {
-            if (actor.getBranchId() == null) {
-                docs = List.of();
-            } else {
-                docs = kbDocumentRepository.findByBranchIdOrderByCreatedAtDesc(actor.getBranchId());
-            }
+        } else if (actor.getBranchId() == null) {
+            docs = List.of();
         } else {
-            if (actor.getBranchId() == null) {
-                docs = List.of();
-            } else {
-                docs = kbDocumentRepository.findVisibleForMember(actor.getId(), actor.getBranchId());
-            }
+            // SECRETARY / MEMBER: own PERSONAL + LEARNING for own branch / global
+            docs = kbDocumentRepository.findVisibleForMember(actor.getId(), actor.getBranchId());
         }
         return docs.stream().map(KbDocumentView::from).toList();
     }
@@ -88,13 +81,12 @@ public class KnowledgeService {
         if (actor.getRole() == Role.ADMIN) {
             return true;
         }
-        if (actor.getRole() == Role.SECRETARY) {
-            return actor.getBranchId() != null && actor.getBranchId().equals(doc.getBranchId());
-        }
-        // MEMBER: own PERSONAL, or LEARNING for own branch / global
+        // PERSONAL is per-user for SECRETARY and MEMBER
         if (doc.getKbType() == KbType.PERSONAL) {
             return actor.getId().equals(doc.getOwnerUserId());
         }
-        return doc.getBranchId() == null || doc.getBranchId().equals(actor.getBranchId());
+        // LEARNING: own branch or global (null branchId)
+        return doc.getBranchId() == null
+                || (actor.getBranchId() != null && doc.getBranchId().equals(actor.getBranchId()));
     }
 }
