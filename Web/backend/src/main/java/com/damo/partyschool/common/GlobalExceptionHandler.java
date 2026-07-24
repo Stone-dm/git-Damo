@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.damo.partyschool.agent.AgentUnavailableException;
 import com.damo.partyschool.auth.AuthException;
 
 @RestControllerAdvice
@@ -16,6 +17,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAuth(AuthException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.fail(401, ex.getMessage()));
+    }
+
+    @ExceptionHandler(AgentUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAgentUnavailable(AgentUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.fail(503, "智能体服务暂不可用"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

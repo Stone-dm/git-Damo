@@ -17,3 +17,5 @@ app:
   jwt:
     secret: test-jwt-secret-key-that-is-long-enough-for-hs256
     expire-ms: 86400000
+  agent:
+    base-url: http://127.0.0.1:9
