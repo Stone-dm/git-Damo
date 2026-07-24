@@ -1,0 +1,61 @@
+﻿commit 8ae4674571d2d0d947a26a393df4da05272dace8
+Author: AkiyamaMio87 <1492657636@qq.com>
+Date:   Fri Jul 24 13:07:57 2026 +0800
+
+    feat: add Expo mobile app with learning, recommend, and assistant
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+
+diff --git a/Web/mobile/app/_layout.tsx b/Web/mobile/app/_layout.tsx
+new file mode 100644
+index 0000000..c0f0840
+--- /dev/null
++++ b/Web/mobile/app/_layout.tsx
+@@ -0,0 +1,18 @@
++import { Stack } from 'expo-router';
++import { StatusBar } from 'expo-status-bar';
++import { AuthProvider } from '@/src/auth/AuthContext';
++
++export { ErrorBoundary } from 'expo-router';
++
++export default function RootLayout() {
++  return (
++    <AuthProvider>
++      <StatusBar style="dark" />
++      <Stack screenOptions={{ headerShown: false }}>
++        <Stack.Screen name="index" />
++        <Stack.Screen name="login" />
++        <Stack.Screen name="(member)" />
++      </Stack>
++    </AuthProvider>
++  );
++}
+diff --git a/Web/mobile/src/auth/token.ts b/Web/mobile/src/auth/token.ts
+new file mode 100644
+index 0000000..b081b3f
+--- /dev/null
++++ b/Web/mobile/src/auth/token.ts
+@@ -0,0 +1,23 @@
++import * as SecureStore from 'expo-secure-store';
++
++const TOKEN_KEY = 'token';
++
++let memoryToken: string | null = null;
++
++export function getToken(): string | null {
++  return memoryToken;
++}
++
++export async function loadToken(): Promise<string | null> {
++  memoryToken = await SecureStore.getItemAsync(TOKEN_KEY);
++  return memoryToken;
++}
++
++export async function setToken(token: string | null): Promise<void> {
++  memoryToken = token;
++  if (token) {
++    await SecureStore.setItemAsync(TOKEN_KEY, token);
++  } else {
++    await SecureStore.deleteItemAsync(TOKEN_KEY);
++  }
++}

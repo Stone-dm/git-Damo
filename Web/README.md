@@ -6,27 +6,47 @@
 
 按下列顺序启动。前后端与 Agent 依赖基础设施；前端/移动端依赖 Backend `:8080`。
 
-### 1. Docker Compose（MySQL + Milvus）
+### 1. Docker Compose（默认只起 MySQL）
+
+本机若 **已有 Milvus（19530）** 或 **已有 MySQL（3306）**，不要用旧的一键全起，按下面做。
 
 ```bash
 cd Web
 cp .env.example .env   # 按需填写 DEEPSEEK_API_KEY 等（见下文）
-docker compose up -d
+
+# 先清掉之前失败/冲突的容器
+docker compose down
+
+# 默认只起项目 MySQL（映射到宿主机 3307，避开本机 3306）
+docker compose up -d mysql
 docker compose ps
 ```
 
-首次拉取镜像可能需要数分钟。就绪后应看到 `mysql`、`milvus`、`etcd`、`minio` 均为 `running`（MySQL healthcheck 通过后为 `healthy`）。
+`.env` 里把端口改成 Docker MySQL：
 
-```bash
-docker compose ps mysql
-docker compose exec mysql mysqladmin ping -h localhost
+```env
+MYSQL_HOST=localhost
+MYSQL_PORT=3307
+MYSQL_DB=party_school
+MYSQL_USER=party
+MYSQL_PASSWORD=party123
+MILVUS_HOST=localhost
+MILVUS_PORT=19530
 ```
+
+启动 Backend / Agent 前请保证环境变量或系统里 `MYSQL_PORT=3307`（或写进你启动用的 `.env`）。
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| MySQL | `localhost:3306` | 库名 `party_school` |
-| Milvus | `localhost:19530` | 向量检索 |
-| MinIO Console | `localhost:9001` | Milvus 对象存储（内部依赖） |
+| MySQL（本仓库 Docker） | `localhost:3307` | 容器内仍是 3306；库名 `party_school` |
+| Milvus（用你已有的） | `localhost:19530` | 不要再起 compose 里的 milvus |
+| MinIO Console | — | 仅 `--profile milvus` 时才起 |
+
+若本机 **没有** Milvus，才需要完整向量栈：
+
+```bash
+docker compose --profile milvus up -d
+```
 
 停止：
 

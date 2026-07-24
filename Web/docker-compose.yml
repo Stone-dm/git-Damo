@@ -1,3 +1,8 @@
+# 默认只起 MySQL（宿主机 3307，避免和本机已有 3306 冲突）。
+# 若本机已有 Milvus（19530），不要起 milvus 相关服务。
+# 需要本仓库自带的完整向量栈时再执行：
+#   docker compose --profile milvus up -d
+
 services:
   mysql:
     image: mysql:8.0
@@ -19,6 +24,7 @@ services:
       retries: 20
 
   etcd:
+    profiles: ["milvus"]
     image: quay.io/coreos/etcd:v3.5.5
     container_name: party-etcd
     environment:
@@ -31,6 +37,7 @@ services:
       - etcd_data:/etcd
 
   minio:
+    profiles: ["milvus"]
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     container_name: party-minio
     environment:
@@ -43,6 +50,7 @@ services:
       - "9001:9001"
 
   milvus:
+    profiles: ["milvus"]
     image: milvusdb/milvus:v2.3.4
     container_name: party-milvus
     command: ["milvus", "run", "standalone"]

@@ -1,0 +1,51 @@
+﻿commit 8ae4674571d2d0d947a26a393df4da05272dace8
+Author: AkiyamaMio87 <1492657636@qq.com>
+Date:   Fri Jul 24 13:07:57 2026 +0800
+
+    feat: add Expo mobile app with learning, recommend, and assistant
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+
+ Web/mobile/.gitignore                              |   42 +
+ Web/mobile/.vscode/extensions.json                 |    1 +
+ Web/mobile/.vscode/settings.json                   |    7 +
+ Web/mobile/LICENSE                                 |   21 +
+ Web/mobile/README.md                               |   36 +
+ Web/mobile/app.json                                |   42 +
+ Web/mobile/app/(member)/_layout.tsx                |   83 +
+ Web/mobile/app/(member)/assistant.tsx              |  209 +
+ Web/mobile/app/(member)/learning.tsx               |  113 +
+ Web/mobile/app/(member)/me.tsx                     |  100 +
+ Web/mobile/app/(member)/recommend.tsx              |  160 +
+ Web/mobile/app/+html.tsx                           |   39 +
+ Web/mobile/app/+not-found.tsx                      |   40 +
+ Web/mobile/app/_layout.tsx                         |   18 +
+ Web/mobile/app/index.tsx                           |   31 +
+ Web/mobile/app/login.tsx                           |  163 +
+ Web/mobile/assets/fonts/SpaceMono-Regular.ttf      |  Bin 0 -> 93252 bytes
+ .../assets/images/android-icon-background.png      |  Bin 0 -> 17549 bytes
+ .../assets/images/android-icon-foreground.png      |  Bin 0 -> 78796 bytes
+ .../assets/images/android-icon-monochrome.png      |  Bin 0 -> 4140 bytes
+ Web/mobile/assets/images/favicon.png               |  Bin 0 -> 1129 bytes
+ Web/mobile/assets/images/icon.png                  |  Bin 0 -> 393493 bytes
+ Web/mobile/assets/images/splash-icon.png           |  Bin 0 -> 17547 bytes
+ Web/mobile/components/EditScreenInfo.tsx           |   76 +
+ Web/mobile/components/ExternalLink.tsx             |   22 +
+ Web/mobile/components/StyledText.tsx               |    5 +
+ Web/mobile/components/Themed.tsx                   |   45 +
+ Web/mobile/components/useClientOnlyValue.ts        |    4 +
+ Web/mobile/components/useClientOnlyValue.web.ts    |   12 +
+ Web/mobile/components/useColorScheme.ts            |    6 +
+ Web/mobile/components/useColorScheme.web.ts        |    8 +
+ Web/mobile/constants/Colors.ts                     |   19 +
+ Web/mobile/package-lock.json                       | 6496 ++++++++++++++++++++
+ Web/mobile/package.json                            |   37 +
+ Web/mobile/src/api/agent.ts                        |   23 +
+ Web/mobile/src/api/client.ts                       |   66 +
+ Web/mobile/src/api/learning.ts                     |    6 +
+ Web/mobile/src/api/types.ts                        |   58 +
+ Web/mobile/src/auth/AuthContext.tsx                |  100 +
+ Web/mobile/src/auth/token.ts                       |   23 +
+ Web/mobile/src/theme.ts                            |   11 +
+ Web/mobile/tsconfig.json                           |   17 +
+ 42 files changed, 8139 insertions(+)
