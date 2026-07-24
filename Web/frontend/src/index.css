@@ -141,68 +141,111 @@ textarea {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 220px 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
-.sidebar {
-  background: var(--sidebar);
-  color: var(--sidebar-text);
-  padding: 20px 14px;
+/* ---- top navigation bar ---- */
+
+.topbar {
+  height: 56px;
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  gap: 16px;
+  z-index: 10;
+}
+
+.topbar-transparent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+}
+
+.topbar-transparent .brand {
+  color: #fff;
+}
+
+.topbar-transparent .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.topbar-transparent .nav-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.topbar-transparent .nav-link.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.topbar-transparent .user-name,
+.topbar-transparent .user-role {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.topbar-transparent .btn.ghost {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.topbar-transparent .btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.topbar-solid {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
 }
 
 .brand {
   font-weight: 700;
   font-size: 1.05rem;
-  color: #fff;
-  padding: 0 8px;
+  white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
 }
 
 .nav-link {
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
-  color: var(--sidebar-text);
+  font-size: 0.92rem;
+  white-space: nowrap;
+  transition: background 0.15s;
 }
 
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
+.topbar-solid .nav-link {
+  color: var(--ink);
 }
 
-.nav-link.active {
-  background: rgba(185, 28, 28, 0.9);
-  color: var(--sidebar-active);
+.topbar-solid .nav-link:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.topbar-solid .nav-link.active {
+  background: rgba(185, 28, 28, 0.1);
+  color: var(--red);
+  font-weight: 600;
 }
 
-.topbar {
-  height: 56px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
+.user-area {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-}
-
-.user-meta {
-  display: flex;
-  align-items: baseline;
   gap: 10px;
+  white-space: nowrap;
 }
 
 .user-name {
@@ -215,7 +258,86 @@ textarea {
 }
 
 .content {
+  flex: 1;
+}
+
+.content-page {
   padding: 24px;
+}
+
+/* ---- home page ---- */
+
+.home-page {
+  min-height: 100vh;
+}
+
+.home-hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top left, rgba(185, 28, 28, 0.25), transparent 50%),
+    linear-gradient(160deg, #1a2332 0%, #2d3f55 40%, #3a5068 100%);
+}
+
+.home-hero-content {
+  text-align: center;
+  color: #fff;
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.home-hero-sub {
+  margin: 16px 0 0;
+  font-size: 1.1rem;
+  opacity: 0.6;
+}
+
+.home-section {
+  padding: 80px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.home-section-inner {
+  width: min(100%, 960px);
+  min-height: 280px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: var(--muted);
+}
+
+.home-section-inner h2 {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.home-section-inner p {
+  margin: 0;
+}
+
+.home-footer {
+  padding: 40px 24px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.home-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .page h2 {
@@ -447,20 +569,22 @@ textarea {
 }
 
 @media (max-width: 800px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    flex-direction: row;
+  .topbar {
     flex-wrap: wrap;
-    align-items: center;
+    height: auto;
+    padding: 12px 16px;
+    gap: 8px;
   }
 
   .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .home-hero-title {
+    font-size: 1.8rem;
   }
 
   .chat-form {

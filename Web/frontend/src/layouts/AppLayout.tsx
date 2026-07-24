@@ -1,9 +1,11 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { menusForRole, ROLE_LABEL } from './menu';
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
 
   if (!user) {
     return null;
@@ -13,8 +15,8 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">党校学习系统</div>
+      <header className={`topbar ${isHome ? 'topbar-transparent' : 'topbar-solid'}`}>
+        <span className="brand">党校学习系统</span>
         <nav className="nav">
           {menus.map((item) => (
             <NavLink
@@ -29,21 +31,17 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-      </aside>
-      <div className="main">
-        <header className="topbar">
-          <div className="user-meta">
-            <span className="user-name">{user.name}</span>
-            <span className="user-role">{ROLE_LABEL[user.role]}</span>
-          </div>
+        <div className="user-area">
+          <span className="user-name">{user.name}</span>
+          <span className="user-role">{ROLE_LABEL[user.role]}</span>
           <button type="button" className="btn ghost" onClick={logout}>
             退出登录
           </button>
-        </header>
-        <main className="content">
-          <Outlet />
-        </main>
-      </div>
+        </div>
+      </header>
+      <main className={`content${isHome ? '' : ' content-page'}`}>
+        <Outlet />
+      </main>
     </div>
   );
 }

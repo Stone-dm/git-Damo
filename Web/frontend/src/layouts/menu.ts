@@ -7,7 +7,8 @@ export interface MenuItem {
 }
 
 export const MENU_ITEMS: MenuItem[] = [
-  { path: '/', label: '工作台', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
+  { path: '/', label: '首页', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
+  { path: '/workbench', label: '工作台', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
   { path: '/users', label: '用户管理', roles: ['ADMIN', 'SECRETARY'] },
   { path: '/branches', label: '支部管理', roles: ['ADMIN'] },
   { path: '/learning', label: '学习资料', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },

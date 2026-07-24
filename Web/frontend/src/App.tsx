@@ -5,6 +5,7 @@ import { AssistantPage } from './pages/AssistantPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ExamsPage } from './pages/ExamsPage';
+import { HomePage } from './pages/HomePage';
 import { KnowledgePage } from './pages/KnowledgePage';
 import { LearningPage } from './pages/LearningPage';
 import { LoginPage } from './pages/LoginPage';
@@ -32,7 +33,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<HomePage />} />
+            <Route path="workbench" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="learning" element={<LearningPage />} />
