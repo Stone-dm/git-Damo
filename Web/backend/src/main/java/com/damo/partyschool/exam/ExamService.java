@@ -17,6 +17,16 @@ public class ExamService {
         this.examRepository = examRepository;
     }
 
+    @Transactional
+    public ExamView createExam(UserPrincipal actor, ExamRequest request) {
+        Exam exam = new Exam();
+        exam.setTitle(request.title().trim());
+        exam.setStatus(request.status() != null ? request.status() : ExamStatus.DRAFT);
+        exam.setBranchId(request.branchId() != null ? request.branchId() : actor.getBranchId());
+        exam = examRepository.save(exam);
+        return ExamView.from(exam);
+    }
+
     @Transactional(readOnly = true)
     public List<ExamView> list(UserPrincipal actor) {
         List<Exam> exams;
