@@ -437,6 +437,152 @@ textarea {
   font-size: 0.75rem !important;
 }
 
+/* —— login → home silk curtain —— */
+.silk-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.silk-curtain {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -6%;
+  height: 112%;
+  will-change: transform;
+}
+
+.silk-transition--covering .silk-curtain {
+  animation: silk-cover 0.92s cubic-bezier(0.22, 0.82, 0.2, 1) both;
+}
+
+.silk-transition--holding .silk-curtain {
+  transform: translateY(0);
+}
+
+.silk-transition--revealing .silk-curtain {
+  animation: silk-reveal 1s cubic-bezier(0.45, 0.05, 0.25, 1) both;
+}
+
+.silk-edge {
+  position: absolute;
+  top: 0;
+  left: -4%;
+  width: 108%;
+  height: 7.5%;
+  z-index: 2;
+  background:
+    radial-gradient(120% 90% at 50% 100%, rgba(255, 190, 160, 0.28), transparent 55%),
+    linear-gradient(180deg, #e23a45 0%, #b41528 55%, #8c0e1c 100%);
+  clip-path: polygon(
+    0% 55%,
+    6% 38%,
+    12% 58%,
+    18% 32%,
+    25% 62%,
+    32% 28%,
+    39% 60%,
+    46% 34%,
+    53% 64%,
+    60% 30%,
+    67% 58%,
+    74% 36%,
+    81% 62%,
+    88% 32%,
+    94% 56%,
+    100% 40%,
+    100% 100%,
+    0% 100%
+  );
+  filter: drop-shadow(0 -10px 18px rgba(60, 0, 10, 0.35));
+}
+
+.silk-body {
+  position: absolute;
+  inset: 4.5% 0 0;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      185deg,
+      #c8102e 0%,
+      #9a0f1f 22%,
+      #d41d33 46%,
+      #7a0a16 68%,
+      #b11226 86%,
+      #5c0710 100%
+    );
+  box-shadow:
+    inset 0 40px 70px rgba(255, 120, 110, 0.12),
+    inset 0 -50px 80px rgba(0, 0, 0, 0.35);
+}
+
+.silk-folds {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    92deg,
+    rgba(255, 255, 255, 0.07) 0px,
+    rgba(255, 255, 255, 0.02) 18px,
+    rgba(0, 0, 0, 0.18) 36px,
+    rgba(120, 10, 20, 0.08) 54px,
+    rgba(255, 255, 255, 0.05) 72px
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+}
+
+.silk-sheen {
+  position: absolute;
+  inset: -10% -20%;
+  background: linear-gradient(
+    118deg,
+    transparent 28%,
+    rgba(255, 210, 180, 0.18) 46%,
+    rgba(255, 255, 255, 0.08) 52%,
+    transparent 68%
+  );
+  transform: translateX(-12%) rotate(4deg);
+  animation: silk-sheen-drift 1.8s ease-in-out both;
+}
+
+@keyframes silk-cover {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes silk-reveal {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-108%);
+  }
+}
+
+@keyframes silk-sheen-drift {
+  from {
+    transform: translateX(-28%) rotate(4deg);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateX(18%) rotate(4deg);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .silk-transition {
+    display: none;
+  }
+}
+
 @keyframes login-hero-in {
   from {
     opacity: 0;

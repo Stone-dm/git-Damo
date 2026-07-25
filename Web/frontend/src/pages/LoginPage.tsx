@@ -2,15 +2,18 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useSilkTransition } from '../transition/SilkTransition';
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
+  const { play: playSilk } = useSilkTransition();
   const navigate = useNavigate();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const features = useMemo(
     () => [
@@ -21,7 +24,7 @@ export function LoginPage() {
     [],
   );
 
-  if (!loading && user) {
+  if (!loading && user && !leaving) {
     return <Navigate to="/" replace />;
   }
 
@@ -32,8 +35,12 @@ export function LoginPage() {
     try {
       await login(username.trim(), password);
       void remember;
-      navigate('/', { replace: true });
+      setLeaving(true);
+      await playSilk(() => {
+        navigate('/', { replace: true });
+      });
     } catch (err) {
+      setLeaving(false);
       const message =
         err instanceof ApiError
           ? err.message

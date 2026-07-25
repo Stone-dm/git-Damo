@@ -11,6 +11,7 @@ import { LearningPage } from './pages/LearningPage';
 import { LoginPage } from './pages/LoginPage';
 import { RecommendPage } from './pages/RecommendPage';
 import { UsersPage } from './pages/UsersPage';
+import { SilkTransitionProvider } from './transition/SilkTransition';
 
 function ProtectedRoute() {
   const { token, loading } = useAuth();
@@ -29,23 +30,25 @@ function ProtectedRoute() {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="workbench" element={<DashboardPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="branches" element={<BranchesPage />} />
-            <Route path="learning" element={<LearningPage />} />
-            <Route path="exams" element={<ExamsPage />} />
-            <Route path="knowledge" element={<KnowledgePage />} />
-            <Route path="recommend" element={<RecommendPage />} />
-            <Route path="assistant" element={<AssistantPage />} />
+      <SilkTransitionProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="workbench" element={<DashboardPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="branches" element={<BranchesPage />} />
+              <Route path="learning" element={<LearningPage />} />
+              <Route path="exams" element={<ExamsPage />} />
+              <Route path="knowledge" element={<KnowledgePage />} />
+              <Route path="recommend" element={<RecommendPage />} />
+              <Route path="assistant" element={<AssistantPage />} />
+            </Route>
           </Route>
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </SilkTransitionProvider>
     </AuthProvider>
   );
 }
