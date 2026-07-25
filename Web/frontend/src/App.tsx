@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AppLayout } from './layouts/AppLayout';
 import { BranchesPage } from './pages/BranchesPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { ExamsPage } from './pages/ExamsPage';
+import { TasksPage } from './pages/TasksPage';
 import { HomePage } from './pages/HomePage';
 import { KnowledgePage } from './pages/KnowledgePage';
 import { LoginPage } from './pages/LoginPage';
@@ -36,7 +36,8 @@ export default function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="resource-center" element={<ResourceCenterPage />} />
-            <Route path="exams" element={<ExamsPage />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="exams" element={<Navigate to="/tasks" replace />} />
             <Route path="knowledge" element={<KnowledgePage />} />
           </Route>
         </Route>

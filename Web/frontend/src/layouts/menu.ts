@@ -12,7 +12,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { path: '/users', label: '用户管理', roles: ['ADMIN', 'SECRETARY'] },
   { path: '/branches', label: '支部管理', roles: ['ADMIN'] },
   { path: '/resource-center', label: '资源中心', roles: ['ADMIN', 'SECRETARY'] },
-  { path: '/exams', label: '考试管理', roles: ['ADMIN', 'SECRETARY'] },
+  { path: '/tasks', label: '任务中心', roles: ['ADMIN', 'SECRETARY'] },
   { path: '/knowledge', label: '知识库', roles: ['ADMIN', 'SECRETARY'] },
 ];
 
