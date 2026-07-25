@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.damo.partyschool.auth.UserPrincipal;
 import com.damo.partyschool.auth.UserView;
 import com.damo.partyschool.branch.BranchService;
+import com.damo.partyschool.development.DevelopmentRecordRepository;
+import com.damo.partyschool.member.MemberProfileRepository;
+import com.damo.partyschool.task.TaskProgressRepository;
 
 @Service
 public class UserService {
@@ -18,14 +21,23 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final BranchService branchService;
+    private final MemberProfileRepository memberProfileRepository;
+    private final DevelopmentRecordRepository developmentRecordRepository;
+    private final TaskProgressRepository taskProgressRepository;
 
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            BranchService branchService) {
+            BranchService branchService,
+            MemberProfileRepository memberProfileRepository,
+            DevelopmentRecordRepository developmentRecordRepository,
+            TaskProgressRepository taskProgressRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.branchService = branchService;
+        this.memberProfileRepository = memberProfileRepository;
+        this.developmentRecordRepository = developmentRecordRepository;
+        this.taskProgressRepository = taskProgressRepository;
     }
 
     @Transactional(readOnly = true)
@@ -86,6 +98,15 @@ public class UserService {
         User target = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
         assertCanWrite(actor, target.getRole(), target.getBranchId(), target);
+
+        // cascade cleanup: remove all associated data
+        memberProfileRepository.findByUserId(id)
+                .ifPresent(memberProfileRepository::delete);
+        developmentRecordRepository.findByUserIdOrderByStartDateAsc(id)
+                .forEach(developmentRecordRepository::delete);
+        taskProgressRepository.findByUserId(id)
+                .forEach(taskProgressRepository::delete);
+
         userRepository.delete(target);
     }
 
