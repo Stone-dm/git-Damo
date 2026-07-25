@@ -106,3 +106,38 @@ export interface ChatRequest {
 export interface ChatResponse {
   reply: string;
 }
+
+// ---- 资源中心 ----
+
+export type MaterialType = 'TEXT' | 'IMAGE' | 'VIDEO';
+
+export interface MaterialView {
+  id: number;
+  title: string;
+  type: MaterialType;
+  content: string | null;
+  fileUrl: string | null;
+  fileAccessUrl: string | null;
+  branchId: number | null;
+  uploaderId: number | null;
+  createdAt: string;
+}
+
+export type QuestionType = 'SINGLE' | 'MULTI' | 'JUDGE' | 'FILL' | 'ESSAY';
+
+export interface QuestionView {
+  id: number | null;
+  stem: string;
+  type: QuestionType;
+  optionsJson: string | null;
+  answer: string;
+  analysis: string | null;
+  score: number;
+  orderNum: number;
+}
+
+export interface QuestionImportResult {
+  parsedCount: number;
+  errors: string[];
+  questions: QuestionView[];
+}

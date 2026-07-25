@@ -6,8 +6,8 @@ import { useAuth } from '../auth/AuthContext';
 export function LoginPage() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +62,7 @@ export function LoginPage() {
           {submitting ? '登录中…' : '登录'}
         </button>
         <p className="hint">
-          种子账号：admin/admin123 · secretary/sec123 · member/mem123
+          管理员 admin/admin123 · 支部书记 secretary/sec123
         </p>
       </form>
     </div>
