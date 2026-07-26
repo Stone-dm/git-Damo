@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -48,6 +50,26 @@ public class TrainingController {
         requireAuth(principal);
         service.deletePlan(id);
         return ApiResponse.ok();
+    }
+
+    /** 发布/取消发布计划 */
+    @PutMapping("/plans/{id}/publish")
+    public ApiResponse<TrainingPlanView> publishPlan(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam("status") String status) {
+        requireAuth(principal);
+        return ApiResponse.ok(service.publishPlan(id, status));
+    }
+
+    /** 批量分配计划给支部党员 */
+    @PostMapping("/plans/{id}/batch-assign")
+    public ApiResponse<Integer> batchAssign(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody List<Long> branchIds) {
+        requireAuth(principal);
+        return ApiResponse.ok(service.batchAssign(id, branchIds));
     }
 
     // ---- Records ----

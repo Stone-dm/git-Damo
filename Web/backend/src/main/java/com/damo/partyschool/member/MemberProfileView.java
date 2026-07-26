@@ -21,11 +21,16 @@ public record MemberProfileView(
         String joinDate,
         String formalDate,
         MemberStatus memberStatus,
-        String floatingLocation) {
+        String floatingLocation,
+        String floatingStartDate,
+        String floatingReason,
+        String floatingExpectedReturn,
+        String floatingContact,
+        String currentStage) {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public static MemberProfileView from(MemberProfile p, String userName, Long branchId, String branchName) {
+    public static MemberProfileView from(MemberProfile p, String userName, Long branchId, String branchName, String currentStage) {
         return new MemberProfileView(
                 p.getId(),
                 p.getUserId(),
@@ -44,6 +49,11 @@ public record MemberProfileView(
                 p.getJoinDate() != null ? p.getJoinDate().format(FMT) : null,
                 p.getFormalDate() != null ? p.getFormalDate().format(FMT) : null,
                 p.getMemberStatus(),
-                p.getFloatingLocation());
+                p.getFloatingLocation(),
+                p.getFloatingStartDate() != null ? p.getFloatingStartDate().format(FMT) : null,
+                p.getFloatingReason(),
+                p.getFloatingExpectedReturn() != null ? p.getFloatingExpectedReturn().format(FMT) : null,
+                p.getFloatingContact(),
+                currentStage);
     }
 }

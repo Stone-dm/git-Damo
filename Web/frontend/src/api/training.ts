@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { TrainingPlanView, TrainingRecordView } from './types';
+import type { PlanStatus, TrainingPlanView, TrainingRecordView } from './types';
 
 // plans
 export function listTrainingPlans(): Promise<TrainingPlanView[]> {
@@ -10,6 +10,9 @@ export function createTrainingPlan(body: {
   title: string;
   description?: string;
   planType: string;
+  status?: PlanStatus;
+  deadline?: string;
+  relatedStage?: string;
 }): Promise<TrainingPlanView> {
   return request<TrainingPlanView>('/api/training/plans', {
     method: 'POST',
@@ -17,8 +20,21 @@ export function createTrainingPlan(body: {
   });
 }
 
+export function publishTrainingPlan(id: number, status: PlanStatus): Promise<TrainingPlanView> {
+  return request<TrainingPlanView>(`/api/training/plans/${id}/publish?status=${status}`, {
+    method: 'PUT',
+  });
+}
+
 export function deleteTrainingPlan(id: number): Promise<void> {
   return request<void>(`/api/training/plans/${id}`, { method: 'DELETE' });
+}
+
+export function batchAssignPlan(planId: number, branchIds: number[]): Promise<number> {
+  return request<number>(`/api/training/plans/${planId}/batch-assign`, {
+    method: 'POST',
+    body: JSON.stringify(branchIds),
+  });
 }
 
 // records

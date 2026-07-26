@@ -8,6 +8,8 @@ public record TrainingRecordView(
         String planTitle,
         Long userId,
         String userName,
+        Long branchId,
+        String branchName,
         boolean completed,
-        LocalDateTime completedAt) {
+        String completedAt) {
 }

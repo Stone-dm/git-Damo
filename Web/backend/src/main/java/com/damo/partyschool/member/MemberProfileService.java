@@ -3,11 +3,15 @@ package com.damo.partyschool.member;
 import com.damo.partyschool.auth.UserPrincipal;
 import com.damo.partyschool.branch.Branch;
 import com.damo.partyschool.branch.BranchRepository;
+import com.damo.partyschool.development.DevelopmentRecord;
+import com.damo.partyschool.development.DevelopmentRecordRepository;
+import com.damo.partyschool.development.DevelopmentStage;
 import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
 import com.damo.partyschool.user.UserService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,16 +26,22 @@ public class MemberProfileService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final UserService userService;
+    private final FloatingContactRecordRepository contactRepository;
+    private final DevelopmentRecordRepository devRecordRepository;
 
     public MemberProfileService(
             MemberProfileRepository profileRepository,
             UserRepository userRepository,
             BranchRepository branchRepository,
-            UserService userService) {
+            UserService userService,
+            FloatingContactRecordRepository contactRepository,
+            DevelopmentRecordRepository devRecordRepository) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
         this.userService = userService;
+        this.contactRepository = contactRepository;
+        this.devRecordRepository = devRecordRepository;
     }
 
     @Transactional
@@ -54,6 +64,10 @@ public class MemberProfileService {
         if (request.formalDate() != null) profile.setFormalDate(request.formalDate());
         if (request.memberStatus() != null) profile.setMemberStatus(request.memberStatus());
         if (request.floatingLocation() != null) profile.setFloatingLocation(request.floatingLocation());
+        if (request.floatingStartDate() != null) profile.setFloatingStartDate(request.floatingStartDate());
+        if (request.floatingReason() != null) profile.setFloatingReason(request.floatingReason());
+        if (request.floatingExpectedReturn() != null) profile.setFloatingExpectedReturn(request.floatingExpectedReturn());
+        if (request.floatingContact() != null) profile.setFloatingContact(request.floatingContact());
 
         profile = profileRepository.save(profile);
         return toView(profile);
@@ -98,6 +112,7 @@ public class MemberProfileService {
                 .collect(Collectors.toMap(MemberProfile::getUserId, p -> p));
         Map<Long, Branch> branchMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, b -> b));
+        Map<Long, String> stageMap = buildStageMap(userIds);
 
         List<MemberProfileView> result = new ArrayList<>();
         for (User user : users) {
@@ -105,13 +120,14 @@ public class MemberProfileService {
             String branchName = user.getBranchId() != null && branchMap.containsKey(user.getBranchId())
                     ? branchMap.get(user.getBranchId()).getName()
                     : "—";
+            String stage = stageMap.get(user.getId());
             if (profile != null) {
-                result.add(MemberProfileView.from(profile, user.getName(), user.getBranchId(), branchName));
+                result.add(MemberProfileView.from(profile, user.getName(), user.getBranchId(), branchName, stage));
             } else {
                 result.add(new MemberProfileView(
                         null, user.getId(), user.getName(), user.getBranchId(), branchName,
                         null, null, null, null, null, null, null, null, null,
-                        null, null, null, null));
+                        null, null, null, null, null, null, null, null, stage));
             }
         }
         return result;
@@ -126,12 +142,13 @@ public class MemberProfileService {
                 ? branchRepository.findById(user.getBranchId()).map(Branch::getName).orElse("—")
                 : "—";
 
+        String stage = resolveStage(userId);
         return profileRepository.findByUserId(userId)
-                .map(p -> MemberProfileView.from(p, user.getName(), user.getBranchId(), branchName))
+                .map(p -> MemberProfileView.from(p, user.getName(), user.getBranchId(), branchName, stage))
                 .orElseGet(() -> new MemberProfileView(
                         null, user.getId(), user.getName(), user.getBranchId(), branchName,
                         null, null, null, null, null, null, null, null, null,
-                        null, null, null, null));
+                        null, null, null, null, null, null, null, null, stage));
     }
 
     @Transactional(readOnly = true)
@@ -157,11 +174,41 @@ public class MemberProfileService {
 
     // ---- helpers ----
 
+    /** 查询某用户当前阶段：取发展记录中最靠后的阶段，同时参考 memberStatus 兜底 */
+    private String resolveStage(Long userId) {
+        // 取发展记录中阶段推进最靠后的
+        int maxDevOrdinal = devRecordRepository.findByUserIdOrderByStartDateAsc(userId)
+                .stream()
+                .mapToInt(r -> r.getStage().ordinal())
+                .max()
+                .orElse(-1);
+        // 从 memberStatus 推导
+        MemberProfile mp = profileRepository.findByUserId(userId).orElse(null);
+        int statusOrdinal = -1;
+        if (mp != null && mp.getMemberStatus() == MemberStatus.FORMAL) statusOrdinal = DevelopmentStage.FORMAL.ordinal();
+        else if (mp != null && mp.getMemberStatus() == MemberStatus.PROBATIONARY) statusOrdinal = DevelopmentStage.PROBATIONARY.ordinal();
+        // 取两者中更靠后的
+        int best = Math.max(maxDevOrdinal, statusOrdinal);
+        if (best >= 0) return DevelopmentStage.values()[best].name();
+        return null;
+    }
+
+    private Map<Long, String> buildStageMap(List<Long> userIds) {
+        Map<Long, String> map = new HashMap<>();
+        for (Long uid : userIds) {
+            String stage = resolveStage(uid);
+            if (stage != null) map.put(uid, stage);
+        }
+        return map;
+    }
+
     private List<MemberProfileView> toViewList(List<MemberProfile> profiles) {
         Map<Long, User> userMap = userRepository.findAll().stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
         Map<Long, Branch> branchMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, b -> b));
+        List<Long> userIds = profiles.stream().map(MemberProfile::getUserId).toList();
+        Map<Long, String> stageMap = buildStageMap(userIds);
 
         return profiles.stream()
                 .filter(p -> userMap.containsKey(p.getUserId())) // skip orphans
@@ -171,7 +218,7 @@ public class MemberProfileService {
                     Long branchId = user.getBranchId();
                     String branchName = branchId != null && branchMap.containsKey(branchId)
                             ? branchMap.get(branchId).getName() : "—";
-                    return MemberProfileView.from(p, userName, branchId, branchName);
+                    return MemberProfileView.from(p, userName, branchId, branchName, stageMap.get(p.getUserId()));
                 })
                 .toList();
     }
@@ -184,6 +231,90 @@ public class MemberProfileService {
         if (branchId != null) {
             branchName = branchRepository.findById(branchId).map(Branch::getName).orElse("—");
         }
-        return MemberProfileView.from(p, userName, branchId, branchName);
+        String stage = resolveStage(p.getUserId());
+        return MemberProfileView.from(p, userName, branchId, branchName, stage);
+    }
+
+    // ---- 流动党员管理 ----
+
+    /** 将党员标记为流动状态 */
+    @Transactional
+    public MemberProfileView markFloating(UserPrincipal actor, Long userId, MemberProfileRequest request) {
+        userService.requireAccessibleUser(actor, userId);
+        MemberProfile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("该党员档案不存在，请先创建档案"));
+        profile.setMemberStatus(MemberStatus.FLOATING);
+        if (request.floatingLocation() != null) profile.setFloatingLocation(request.floatingLocation());
+        if (request.floatingStartDate() != null) profile.setFloatingStartDate(request.floatingStartDate());
+        if (request.floatingReason() != null) profile.setFloatingReason(request.floatingReason());
+        if (request.floatingExpectedReturn() != null) profile.setFloatingExpectedReturn(request.floatingExpectedReturn());
+        if (request.floatingContact() != null) profile.setFloatingContact(request.floatingContact());
+        profile = profileRepository.save(profile);
+        return toView(profile);
+    }
+
+    /** 将流动党员转回正常状态（清除流动相关字段） */
+    @Transactional
+    public MemberProfileView returnFromFloating(UserPrincipal actor, Long userId) {
+        userService.requireAccessibleUser(actor, userId);
+        MemberProfile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("该党员档案不存在"));
+        if (profile.getMemberStatus() != MemberStatus.FLOATING) {
+            throw new IllegalStateException("该党员当前不是流动状态");
+        }
+        profile.setMemberStatus(MemberStatus.FORMAL);
+        profile.setFloatingLocation(null);
+        profile.setFloatingStartDate(null);
+        profile.setFloatingReason(null);
+        profile.setFloatingExpectedReturn(null);
+        profile.setFloatingContact(null);
+        profile = profileRepository.save(profile);
+        return toView(profile);
+    }
+
+    // ---- 流动党员联系记录 ----
+
+    /** 添加联系记录 */
+    @Transactional
+    public FloatingContactView addFloatingContact(UserPrincipal actor, Long userId, FloatingContactRequest request) {
+        userService.requireAccessibleUser(actor, userId);
+        FloatingContactRecord record = new FloatingContactRecord();
+        record.setUserId(userId);
+        record.setContactDate(request.contactDate());
+        record.setContactMethod(request.contactMethod());
+        record.setSummary(request.summary());
+        record = contactRepository.save(record);
+        return FloatingContactView.from(record);
+    }
+
+    /** 查看联系记录列表 */
+    @Transactional(readOnly = true)
+    public List<FloatingContactView> listFloatingContacts(UserPrincipal actor, Long userId) {
+        userService.requireAccessibleUser(actor, userId);
+        return contactRepository.findByUserIdOrderByContactDateDesc(userId).stream()
+                .map(FloatingContactView::from)
+                .toList();
+    }
+
+    /** 编辑联系记录 */
+    @Transactional
+    public FloatingContactView updateFloatingContact(UserPrincipal actor, Long id, FloatingContactRequest request) {
+        FloatingContactRecord record = contactRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("联系记录不存在"));
+        userService.requireAccessibleUser(actor, record.getUserId());
+        if (request.contactDate() != null) record.setContactDate(request.contactDate());
+        if (request.contactMethod() != null) record.setContactMethod(request.contactMethod());
+        if (request.summary() != null) record.setSummary(request.summary());
+        record = contactRepository.save(record);
+        return FloatingContactView.from(record);
+    }
+
+    /** 删除联系记录 */
+    @Transactional
+    public void deleteFloatingContact(UserPrincipal actor, Long id) {
+        FloatingContactRecord record = contactRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("联系记录不存在"));
+        userService.requireAccessibleUser(actor, record.getUserId());
+        contactRepository.delete(record);
     }
 }

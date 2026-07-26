@@ -55,6 +55,28 @@ public class DevelopmentRecordService {
                 .toList();
     }
 
+    /** 编辑阶段记录（开始/结束日期、备注） */
+    @Transactional
+    public DevelopmentRecordView update(UserPrincipal actor, Long id, DevelopmentRecordRequest request) {
+        DevelopmentRecord record = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("阶段记录不存在"));
+        userService.requireAccessibleUser(actor, record.getUserId());
+        if (request.startDate() != null) record.setStartDate(request.startDate());
+        if (request.endDate() != null) record.setEndDate(request.endDate());
+        if (request.notes() != null) record.setNotes(request.notes());
+        record = repository.save(record);
+        User user = userRepository.findById(record.getUserId()).orElse(null);
+        return DevelopmentRecordView.from(record, user != null ? user.getName() : "—");
+    }
+
+    /** 获取某党员当前所处的最新阶段（返回 stage 名称，无记录则返回 null） */
+    @Transactional(readOnly = true)
+    public String getCurrentStage(Long userId) {
+        return repository.findTopByUserIdOrderByStartDateDesc(userId)
+                .map(r -> r.getStage().name())
+                .orElse(null);
+    }
+
     @Transactional(readOnly = true)
     public List<DevelopmentRecordView> listByStage(UserPrincipal actor, DevelopmentStage stage) {
         return filterForActor(actor, repository.findByStage(stage));

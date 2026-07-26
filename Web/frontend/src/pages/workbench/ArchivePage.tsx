@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../../api/client';
+import { ApiError, getToken } from '../../api/client';
 import { listBranches } from '../../api/branches';
-import { getMemberProfileByUserId, listMemberProfiles } from '../../api/member-profiles';
-import type { BranchView, MemberProfileView } from '../../api/types';
+import { getMemberProfileByUserId, listMemberDocuments, listMemberProfiles, uploadMemberDocument, deleteMemberDocument } from '../../api/member-profiles';
+import type { BranchView, DocType, MemberDocumentView, MemberProfileView } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
 
 function errMsg(err: unknown): string {
@@ -15,9 +15,65 @@ const STATUS_LABEL: Record<string, string> = {
   FLOATING: '流动党员',
 };
 
+const DOC_TYPE_LABEL: Record<string, string> = {
+  APPLICATION: '入党申请书',
+  TALK_RECORD: '谈话记录',
+  THOUGHT_REPORT: '思想汇报',
+  CULTIVATION_FORM: '培养考察表',
+  TRAINING_CERT: '党校结业证书',
+  POLITICAL_REVIEW: '政治审查材料',
+  AUTOBIOGRAPHY: '个人自传',
+  PUBLIC_NOTICE: '公示材料',
+  VOLUNTEER_FORM: '入党志愿书',
+  PROBATION_REPORT: '预备期思想汇报',
+  PROBATION_FORM: '预备党员考察鉴定表',
+  CONVERSION_APPLICATION: '转正申请书',
+};
+
+interface StageGroup {
+  label: string;
+  icon: string;
+  color: string;
+  docTypes: DocType[];
+}
+
+const STAGE_GROUPS: StageGroup[] = [
+  {
+    label: '入党申请人阶段',
+    icon: '📝',
+    color: '#3b82f6',
+    docTypes: ['APPLICATION', 'TALK_RECORD'],
+  },
+  {
+    label: '入党积极分子阶段',
+    icon: '🌱',
+    color: '#22c55e',
+    docTypes: ['THOUGHT_REPORT', 'CULTIVATION_FORM', 'TRAINING_CERT'],
+  },
+  {
+    label: '发展对象阶段',
+    icon: '🔍',
+    color: '#f59e0b',
+    docTypes: ['POLITICAL_REVIEW', 'AUTOBIOGRAPHY', 'PUBLIC_NOTICE'],
+  },
+  {
+    label: '预备党员阶段',
+    icon: '⭐',
+    color: '#8b5cf6',
+    docTypes: ['VOLUNTEER_FORM', 'PROBATION_REPORT', 'PROBATION_FORM'],
+  },
+  {
+    label: '正式党员阶段',
+    icon: '🏅',
+    color: '#ef4444',
+    docTypes: ['CONVERSION_APPLICATION'],
+  },
+];
+
 export function ArchivePage() {
   const { user } = useAuth();
   const isSecretary = user?.role === 'SECRETARY';
+  const canManage = user?.role === 'ADMIN' || user?.role === 'SECRETARY';
 
   const [members, setMembers] = useState<MemberProfileView[]>([]);
   const [branches, setBranches] = useState<BranchView[]>([]);
@@ -29,7 +85,17 @@ export function ArchivePage() {
 
   // detail modal
   const [detail, setDetail] = useState<MemberProfileView | null>(null);
+  const [detailDocs, setDetailDocs] = useState<MemberDocumentView[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // upload modal
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadUserId, setUploadUserId] = useState<number | null>(null);
+  const [uploadDocType, setUploadDocType] = useState('');
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSaving, setUploadSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const load = useCallback(async (branchId: number | null) => {
     setLoading(true);
@@ -65,13 +131,67 @@ export function ArchivePage() {
   const openDetail = async (userId: number) => {
     setDetailLoading(true);
     setDetail(null);
+    setDetailDocs([]);
     try {
-      const d = await getMemberProfileByUserId(userId);
+      const [d, docs] = await Promise.all([
+        getMemberProfileByUserId(userId),
+        listMemberDocuments(userId),
+      ]);
       setDetail(d);
+      setDetailDocs(docs);
     } catch {
       setDetail(null);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleDownloadDoc = (userId: number, docId: number) => {
+    const token = getToken();
+    const downloadUrl = `/api/member-profiles/${userId}/documents/${docId}/file?token=${encodeURIComponent(token ?? '')}`;
+    window.open(downloadUrl, '_blank');
+  };
+
+  const openUploadModal = (userId: number) => {
+    setUploadUserId(userId);
+    setUploadDocType('');
+    setUploadTitle('');
+    setUploadFile(null);
+    setUploadError(null);
+    setShowUploadModal(true);
+  };
+
+  const handleUpload = async () => {
+    if (!uploadUserId || !uploadDocType || !uploadTitle.trim() || !uploadFile) return;
+    setUploadSaving(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append('docType', uploadDocType);
+      fd.append('title', uploadTitle.trim());
+      fd.append('file', uploadFile);
+      await uploadMemberDocument(uploadUserId, fd);
+      setShowUploadModal(false);
+      // refresh documents if detail is still open
+      if (detail && detail.userId === uploadUserId) {
+        const docs = await listMemberDocuments(uploadUserId);
+        setDetailDocs(docs);
+      }
+    } catch (err) {
+      setUploadError(errMsg(err));
+    } finally {
+      setUploadSaving(false);
+    }
+  };
+
+  const handleDeleteDoc = async (userId: number, docId: number) => {
+    if (!window.confirm('确定删除该档案材料？此操作不可撤销。')) return;
+    try {
+      await deleteMemberDocument(userId, docId);
+      const docs = await listMemberDocuments(userId);
+      setDetailDocs(docs);
+    } catch {
+      // ignore
     }
   };
 
@@ -188,13 +308,30 @@ export function ArchivePage() {
         <div className="modal-overlay" onClick={() => setDetail(null)}>
           <div className="modal-card member-detail" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{detail.userName} — 党员档案</h3>
-              <button
-                className="modal-close"
-                onClick={() => setDetail(null)}
-              >
-                ✕
-              </button>
+              <h3>
+                {detail.userName} — 党员档案
+                <span className="muted" style={{ fontSize: '0.82rem', fontWeight: 400, marginLeft: 10 }}>
+                  （档案材料 {detailDocs.length}/12）
+                </span>
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {canManage && (
+                  <button
+                    className="btn ghost"
+                    style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                    onClick={() => openUploadModal(detail.userId)}
+                    title="上传材料"
+                  >
+                    📎 上传材料
+                  </button>
+                )}
+                <button
+                  className="modal-close"
+                  onClick={() => setDetail(null)}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             <div className="member-detail-body">
@@ -287,6 +424,166 @@ export function ArchivePage() {
                     <span className="detail-value">{detail.position || '—'}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* 档案材料 */}
+              <div className="detail-section">
+                <h4 className="detail-section-title">档案材料</h4>
+                {STAGE_GROUPS.map((stage) => {
+                  const stageDocs = detailDocs.filter((d) =>
+                    stage.docTypes.includes(d.docType as DocType),
+                  );
+                  const stageEmpty = stageDocs.length === 0;
+                  return (
+                    <div key={stage.label} className={`doc-stage ${stageEmpty ? 'doc-stage-empty' : ''}`}>
+                      <div className="doc-stage-header" style={{ borderLeftColor: stage.color }}>
+                        <span className="doc-stage-icon">{stage.icon}</span>
+                        <span className="doc-stage-label">{stage.label}</span>
+                        {stageEmpty && (
+                          <span className="doc-stage-empty-hint">该阶段暂无材料</span>
+                        )}
+                      </div>
+                      <div className="doc-stage-items">
+                        {stage.docTypes.map((dt) => {
+                          const docsOfType = stageDocs.filter((d) => d.docType === dt);
+                          const hasDoc = docsOfType.length > 0;
+                          return (
+                            <div
+                              key={dt}
+                              className={`doc-type-row ${hasDoc ? 'has-doc' : 'no-doc'}`}
+                              onClick={() => {
+                                if (hasDoc) handleDownloadDoc(detail.userId, docsOfType[0].id);
+                              }}
+                            >
+                              <span className="doc-type-check">
+                                {hasDoc ? '✅' : '⬜'}
+                              </span>
+                              <span className="doc-type-name">
+                                {DOC_TYPE_LABEL[dt] ?? dt}
+                              </span>
+                              {hasDoc ? (
+                                <>
+                                  <span className="doc-type-file">
+                                    {docsOfType[0].fileName}
+                                    <span className="doc-type-time">{docsOfType[0].uploadedAt}</span>
+                                  </span>
+                                  {canManage && (
+                                    <button
+                                      className="btn ghost doc-delete-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteDoc(detail.userId, docsOfType[0].id);
+                                      }}
+                                      title="删除材料"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="doc-type-missing">未上传</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======== upload document modal ======== */}
+      {showUploadModal && (
+        <div className="modal-overlay" onClick={() => !uploadSaving && setShowUploadModal(false)}>
+          <div className="modal-card" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>上传档案材料</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowUploadModal(false)}
+                disabled={uploadSaving}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="member-detail-body">
+              {uploadError && (
+                <div className="form-error" style={{ marginBottom: 12 }}>{uploadError}</div>
+              )}
+              <div className="form-grid">
+                <label className="span-2">
+                  材料类型
+                  <select
+                    value={uploadDocType}
+                    onChange={(e) => {
+                      setUploadDocType(e.target.value);
+                      if (!uploadTitle) {
+                        setUploadTitle(DOC_TYPE_LABEL[e.target.value] ?? '');
+                      }
+                    }}
+                  >
+                    <option value="">请选择材料类型</option>
+                    {STAGE_GROUPS.map((stage) => (
+                      <optgroup key={stage.label} label={`${stage.icon} ${stage.label}`}>
+                        {stage.docTypes.map((dt) => (
+                          <option key={dt} value={dt}>
+                            {DOC_TYPE_LABEL[dt]}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <label className="span-2">
+                  材料标题
+                  <input
+                    type="text"
+                    placeholder="如：2024年度思想汇报"
+                    maxLength={200}
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                  />
+                </label>
+                <label className="span-2">
+                  选择文件
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      setUploadFile(f);
+                      if (f && !uploadTitle) {
+                        const name = f.name.replace(/\.[^.]+$/, '');
+                        setUploadTitle(name);
+                      }
+                    }}
+                  />
+                </label>
+                {uploadFile && (
+                  <div className="muted" style={{ fontSize: '0.82rem', gridColumn: '1 / -1' }}>
+                    已选择：{uploadFile.name}（{(uploadFile.size / 1024).toFixed(1)} KB）
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 18, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  className="btn ghost"
+                  onClick={() => setShowUploadModal(false)}
+                  disabled={uploadSaving}
+                >
+                  取消
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={handleUpload}
+                  disabled={uploadSaving || !uploadDocType || !uploadTitle.trim() || !uploadFile}
+                >
+                  {uploadSaving ? '上传中…' : '确认上传'}
+                </button>
               </div>
             </div>
           </div>

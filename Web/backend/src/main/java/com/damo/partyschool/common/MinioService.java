@@ -85,6 +85,65 @@ public class MinioService {
         }
     }
 
+    // ---- bucket-aware methods ----
+
+    /** 上传文件到指定 bucket */
+    public void uploadFile(String bucketName, String objectName, InputStream stream, String contentType, long size) {
+        try {
+            ensureBucket(bucketName);
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .stream(stream, size, -1)
+                            .contentType(contentType)
+                            .build());
+            log.info("Uploaded to MinIO bucket={}: {}", bucketName, objectName);
+        } catch (Exception e) {
+            throw new RuntimeException("MinIO upload failed", e);
+        }
+    }
+
+    /** 获取预签名 URL（指定有效期） */
+    public String getPresignedUrl(String bucketName, String objectName, int expiryMinutes) {
+        if (objectName == null || objectName.isBlank()) return null;
+        try {
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .method(Method.GET)
+                            .expiry(expiryMinutes * 60)
+                            .build());
+        } catch (Exception e) {
+            log.warn("MinIO presigned URL failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 删除指定 bucket 中的文件 */
+    public void deleteFile(String bucketName, String objectName) {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder().bucket(bucketName).object(objectName).build());
+        } catch (Exception e) {
+            log.warn("MinIO delete failed (non-fatal): {}", e.getMessage());
+        }
+    }
+
+    /** 确保指定 bucket 存在，不存在则创建 */
+    public void ensureBucket(String bucketName) {
+        try {
+            boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+            if (!exists) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+                log.info("Created MinIO bucket: {}", bucketName);
+            }
+        } catch (Exception e) {
+            log.warn("MinIO bucket check failed for '{}': {}", bucketName, e.getMessage());
+        }
+    }
+
     private static String sanitize(String name) {
         return name.replaceAll("[^a-zA-Z0-9._-]", "_");
     }

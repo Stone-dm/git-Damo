@@ -21,6 +21,9 @@ import com.damo.partyschool.exam.ExamRepository;
 import com.damo.partyschool.exam.ExamStatus;
 import com.damo.partyschool.learning.LearningContent;
 import com.damo.partyschool.learning.LearningRepository;
+import com.damo.partyschool.member.DocType;
+import com.damo.partyschool.member.MemberDocument;
+import com.damo.partyschool.member.MemberDocumentRepository;
 import com.damo.partyschool.member.MemberProfile;
 import com.damo.partyschool.member.MemberProfileRepository;
 import com.damo.partyschool.member.MemberStatus;
@@ -54,6 +57,7 @@ public class DataSeeder implements ApplicationRunner {
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingRecordRepository trainingRecordRepository;
     private final TaskRepository taskRepository;
+    private final MemberDocumentRepository memberDocumentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(
@@ -66,6 +70,7 @@ public class DataSeeder implements ApplicationRunner {
             TrainingPlanRepository trainingPlanRepository,
             TrainingRecordRepository trainingRecordRepository,
             TaskRepository taskRepository,
+            MemberDocumentRepository memberDocumentRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
@@ -76,6 +81,7 @@ public class DataSeeder implements ApplicationRunner {
         this.trainingPlanRepository = trainingPlanRepository;
         this.trainingRecordRepository = trainingRecordRepository;
         this.taskRepository = taskRepository;
+        this.memberDocumentRepository = memberDocumentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -115,32 +121,69 @@ public class DataSeeder implements ApplicationRunner {
                 member.getId(), "MALE", "汉族", LocalDate.of(1990, 5, 12),
                 "13800001001", "本科", "工学学士", "示范单位党委", "干事",
                 LocalDate.of(2015, 7, 1), LocalDate.of(2016, 7, 1),
-                MemberStatus.FORMAL, null));
+                MemberStatus.FORMAL, null, null, null, null, null));
         memberProfileRepository.save(profile(
                 zhang.getId(), "MALE", "汉族", LocalDate.of(1988, 3, 8),
                 "13800001002", "硕士", "法学硕士", "示范单位办公室", "科员",
                 LocalDate.of(2018, 1, 15), LocalDate.of(2019, 1, 15),
-                MemberStatus.FORMAL, null));
+                MemberStatus.FORMAL, null, null, null, null, null));
         memberProfileRepository.save(profile(
                 li.getId(), "FEMALE", "回族", LocalDate.of(1995, 11, 20),
                 "13800001003", "本科", "文学学士", "示范单位宣传部", "干事",
                 LocalDate.of(2024, 6, 1), null,
-                MemberStatus.PROBATIONARY, null));
+                MemberStatus.PROBATIONARY, null, null, null, null, null));
         memberProfileRepository.save(profile(
                 wang.getId(), "FEMALE", "汉族", LocalDate.of(1992, 9, 3),
                 "13800001004", "本科", null, "驻外协作单位", "专员",
                 LocalDate.of(2017, 5, 1), LocalDate.of(2018, 5, 1),
-                MemberStatus.FLOATING, "上海市浦东新区"));
+                MemberStatus.FLOATING, "上海市浦东新区",
+                LocalDate.of(2025, 3, 1), "因工作需要长期驻外",
+                LocalDate.of(2027, 3, 1), "13800001004"));
         memberProfileRepository.save(profile(
                 zhao.getId(), "MALE", "汉族", LocalDate.of(1985, 2, 14),
                 "13900002001", "本科", null, "第二单位", "主任",
                 LocalDate.of(2010, 3, 1), LocalDate.of(2011, 3, 1),
-                MemberStatus.FORMAL, null));
+                MemberStatus.FORMAL, null, null, null, null, null));
         memberProfileRepository.save(profile(
                 chen.getId(), "FEMALE", "汉族", LocalDate.of(1998, 7, 22),
                 "13900002002", "硕士", null, "第二单位", "助理",
                 LocalDate.of(2023, 12, 1), null,
-                MemberStatus.PROBATIONARY, null));
+                MemberStatus.PROBATIONARY, null, null, null, null, null));
+
+        // ===== 档案材料种子数据 =====
+        Long uploaderId = userRepository.findByUsername("admin").orElseThrow().getId();
+
+        // 正式党员 张伟：入党申请书 + 入党志愿书 + 转正申请书（完整3类）
+        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.APPLICATION,
+                "张伟 - 入党申请书", "zhangwei_application.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.VOLUNTEER_FORM,
+                "张伟 - 入党志愿书", "zhangwei_volunteer.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.CONVERSION_APPLICATION,
+                "张伟 - 转正申请书", "zhangwei_conversion.pdf", uploaderId));
+
+        // 正式党员 普通党员(member)：入党申请书 + 入党志愿书 + 转正申请书
+        memberDocumentRepository.save(memberDoc(member.getId(), DocType.APPLICATION,
+                "普通党员 - 入党申请书", "member_application.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(member.getId(), DocType.VOLUNTEER_FORM,
+                "普通党员 - 入党志愿书", "member_volunteer.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(member.getId(), DocType.CONVERSION_APPLICATION,
+                "普通党员 - 转正申请书", "member_conversion.pdf", uploaderId));
+
+        // 预备党员 李娜：入党申请书 + 思想汇报 + 入党志愿书（缺转正申请书）
+        memberDocumentRepository.save(memberDoc(li.getId(), DocType.APPLICATION,
+                "李娜 - 入党申请书", "lina_application.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(li.getId(), DocType.THOUGHT_REPORT,
+                "2024年第一季度思想汇报", "lina_thought_q1.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(li.getId(), DocType.VOLUNTEER_FORM,
+                "李娜 - 入党志愿书", "lina_volunteer.pdf", uploaderId));
+
+        // 流动党员 王芳：入党申请书 + 思想汇报
+        memberDocumentRepository.save(memberDoc(wang.getId(), DocType.APPLICATION,
+                "王芳 - 入党申请书", "wangfang_application.pdf", uploaderId));
+        memberDocumentRepository.save(memberDoc(wang.getId(), DocType.THOUGHT_REPORT,
+                "王芳 - 思想汇报", "wangfang_thought.pdf", uploaderId));
+
+        log.info("Seeded {} member documents", memberDocumentRepository.count());
 
         // 发展记录（本支部 + 外支部各一条）
         developmentRecordRepository.save(dev(
@@ -269,7 +312,11 @@ public class DataSeeder implements ApplicationRunner {
             LocalDate joinDate,
             LocalDate formalDate,
             MemberStatus status,
-            String floatingLocation) {
+            String floatingLocation,
+            LocalDate floatingStartDate,
+            String floatingReason,
+            LocalDate floatingExpectedReturn,
+            String floatingContact) {
         MemberProfile p = new MemberProfile();
         p.setUserId(userId);
         p.setGender(gender);
@@ -284,6 +331,10 @@ public class DataSeeder implements ApplicationRunner {
         p.setFormalDate(formalDate);
         p.setMemberStatus(status);
         p.setFloatingLocation(floatingLocation);
+        p.setFloatingStartDate(floatingStartDate);
+        p.setFloatingReason(floatingReason);
+        p.setFloatingExpectedReturn(floatingExpectedReturn);
+        p.setFloatingContact(floatingContact);
         return p;
     }
 
@@ -303,6 +354,7 @@ public class DataSeeder implements ApplicationRunner {
         p.setTitle(title);
         p.setDescription(description);
         p.setPlanType(planType);
+        p.setStatus("ACTIVE");
         return p;
     }
 
@@ -334,5 +386,18 @@ public class DataSeeder implements ApplicationRunner {
         t.setReferenceId(referenceId);
         t.setDueDate(dueDate);
         return t;
+    }
+
+    private MemberDocument memberDoc(
+            Long userId, DocType docType, String title, String fileName, Long uploaderId) {
+        MemberDocument doc = new MemberDocument();
+        doc.setUserId(userId);
+        doc.setDocType(docType);
+        doc.setTitle(title);
+        doc.setFileUrl("member-documents/" + userId + "/" + docType.name() + "/seed_" + fileName);
+        doc.setFileName(fileName);
+        doc.setUploadedAt(LocalDateTime.now().minusDays(30));
+        doc.setUploaderId(uploaderId);
+        return doc;
     }
 }

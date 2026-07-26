@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,6 +32,16 @@ public class DevelopmentRecordController {
             @Valid @RequestBody DevelopmentRecordRequest request) {
         requireAuth(principal);
         return ApiResponse.ok(service.create(principal, request));
+    }
+
+    /** 编辑阶段记录 */
+    @PutMapping("/{id}")
+    public ApiResponse<DevelopmentRecordView> update(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody DevelopmentRecordRequest request) {
+        requireAuth(principal);
+        return ApiResponse.ok(service.update(principal, id, request));
     }
 
     /** 获取某党员的发展历程 */

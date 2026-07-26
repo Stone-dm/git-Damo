@@ -16,5 +16,9 @@ public record MemberProfileRequest(
         LocalDate joinDate,
         LocalDate formalDate,
         MemberStatus memberStatus,
-        String floatingLocation) {
+        String floatingLocation,
+        LocalDate floatingStartDate,
+        String floatingReason,
+        LocalDate floatingExpectedReturn,
+        String floatingContact) {
 }

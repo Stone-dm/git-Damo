@@ -70,4 +70,16 @@ public class MemberProfile {
 
     @Column(length = 128)
     private String floatingLocation; // 流入地（仅流动党员）
+
+    // ---- 流动信息 ----
+
+    private LocalDate floatingStartDate; // 流出时间
+
+    @Column(length = 200)
+    private String floatingReason; // 流出原因
+
+    private LocalDate floatingExpectedReturn; // 预计返回时间
+
+    @Column(length = 20)
+    private String floatingContact; // 紧急联系电话
 }

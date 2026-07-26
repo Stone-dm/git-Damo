@@ -226,6 +226,11 @@ export interface MemberProfileView {
   formalDate: string | null;
   memberStatus: MemberStatus | null;
   floatingLocation: string | null;
+  floatingStartDate: string | null;
+  floatingReason: string | null;
+  floatingExpectedReturn: string | null;
+  floatingContact: string | null;
+  currentStage: string | null;
 }
 
 export interface MemberProfileRequest {
@@ -243,6 +248,55 @@ export interface MemberProfileRequest {
   formalDate?: string;
   memberStatus?: MemberStatus;
   floatingLocation?: string;
+  floatingStartDate?: string;
+  floatingReason?: string;
+  floatingExpectedReturn?: string;
+  floatingContact?: string;
+}
+
+// ---- 流动党员联系记录 ----
+
+export type ContactMethod = 'PHONE' | 'WECHAT' | 'VISIT' | 'LETTER';
+
+export interface FloatingContactView {
+  id: number;
+  userId: number;
+  contactDate: string;
+  contactMethod: ContactMethod;
+  summary: string | null;
+  createdAt: string;
+}
+
+export interface FloatingContactRequest {
+  contactDate: string;
+  contactMethod: ContactMethod;
+  summary?: string;
+}
+
+// ---- 党员档案材料 ----
+
+export type DocType =
+  | 'APPLICATION'
+  | 'TALK_RECORD'
+  | 'THOUGHT_REPORT'
+  | 'CULTIVATION_FORM'
+  | 'TRAINING_CERT'
+  | 'POLITICAL_REVIEW'
+  | 'AUTOBIOGRAPHY'
+  | 'PUBLIC_NOTICE'
+  | 'VOLUNTEER_FORM'
+  | 'PROBATION_REPORT'
+  | 'PROBATION_FORM'
+  | 'CONVERSION_APPLICATION';
+
+export interface MemberDocumentView {
+  id: number;
+  userId: number;
+  docType: DocType;
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
 }
 
 // ---- 发展党员阶段 ----
@@ -273,15 +327,43 @@ export interface DevelopmentRecordRequest {
   notes?: string;
 }
 
+// ---- 培养联系人 ----
+
+export interface CultivationContactView {
+  id: number;
+  mentorUserId: number;
+  mentorName: string;
+  mentorPhone: string | null;
+  traineeUserId: number;
+  role: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  notes: string | null;
+}
+
+export interface CultivationContactRequest {
+  mentorUserId: number;
+  traineeUserId: number;
+  role?: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+}
+
 // ---- 培养教育 ----
 
 export type PlanType = 'THEORY' | 'PRACTICE' | 'EDUCATION';
+
+export type PlanStatus = 'DRAFT' | 'ACTIVE';
 
 export interface TrainingPlanView {
   id: number;
   title: string;
   description: string | null;
   planType: PlanType;
+  status: PlanStatus;
+  deadline: string | null;
+  relatedStage: string | null;
   createdAt: string;
 }
 
@@ -291,6 +373,8 @@ export interface TrainingRecordView {
   planTitle: string;
   userId: number;
   userName: string;
+  branchId: number | null;
+  branchName: string;
   completed: boolean;
   completedAt: string | null;
 }

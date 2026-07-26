@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(503, "智能体服务暂不可用"));
     }
 
+    @ExceptionHandler(MinioUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMinioUnavailable(MinioUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.fail(503, ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

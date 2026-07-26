@@ -14,6 +14,16 @@ export function createDevelopmentRecord(
   });
 }
 
+export function updateDevelopmentRecord(
+  id: number,
+  body: Partial<DevelopmentRecordRequest>,
+): Promise<DevelopmentRecordView> {
+  return request<DevelopmentRecordView>(`/api/development-records/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export function listDevelopmentByUser(
   userId: number,
 ): Promise<DevelopmentRecordView[]> {
