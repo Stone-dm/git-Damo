@@ -68,12 +68,12 @@ class BranchControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].name").value("示范党支部"));
+                .andExpect(jsonPath("$.data[0].name").value("第一党支部"));
     }
 
     @Test
     void memberCannotCreateBranch() throws Exception {
-        String token = login("member", "mem123");
+        String token = login("zhangsan", "mem123");
 
         mockMvc.perform(post("/api/branches")
                         .header("Authorization", "Bearer " + token)

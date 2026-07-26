@@ -24,8 +24,8 @@ public class MemberProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 关联 User.id */
-    @Column(nullable = false, unique = true)
+    /** 关联 User.id（仅正式党员有对应登录账号，预备/流动党员为 null） */
+    @Column(unique = true)
     private Long userId;
 
     // ---- 基础信息 ----

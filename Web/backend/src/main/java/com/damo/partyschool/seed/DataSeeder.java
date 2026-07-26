@@ -16,9 +16,6 @@ import com.damo.partyschool.branch.BranchRepository;
 import com.damo.partyschool.development.DevelopmentRecord;
 import com.damo.partyschool.development.DevelopmentRecordRepository;
 import com.damo.partyschool.development.DevelopmentStage;
-import com.damo.partyschool.exam.Exam;
-import com.damo.partyschool.exam.ExamRepository;
-import com.damo.partyschool.exam.ExamStatus;
 import com.damo.partyschool.learning.LearningContent;
 import com.damo.partyschool.learning.LearningRepository;
 import com.damo.partyschool.member.DocType;
@@ -31,17 +28,15 @@ import com.damo.partyschool.task.Task;
 import com.damo.partyschool.task.TaskRepository;
 import com.damo.partyschool.task.TaskStatus;
 import com.damo.partyschool.task.TaskType;
-import com.damo.partyschool.training.TrainingPlan;
-import com.damo.partyschool.training.TrainingPlanRepository;
-import com.damo.partyschool.training.TrainingRecord;
-import com.damo.partyschool.training.TrainingRecordRepository;
 import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
 
 /**
- * 空库时写入多支部演示数据，便于验证「书记仅本支部」：
- * 示范党支部（secretary）vs 第二党支部（secretary2）。
+ * 空库时写入测试数据，便于开发调试。
+ *
+ * 只有正式党员（FORMAL）才有 User 登录账号；
+ * 预备党员（PROBATIONARY）和流动党员（FLOATING）仅存党员档案，不在用户表出现。
  */
 @Component
 public class DataSeeder implements ApplicationRunner {
@@ -50,38 +45,29 @@ public class DataSeeder implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
-    private final LearningRepository learningRepository;
-    private final ExamRepository examRepository;
     private final MemberProfileRepository memberProfileRepository;
-    private final DevelopmentRecordRepository developmentRecordRepository;
-    private final TrainingPlanRepository trainingPlanRepository;
-    private final TrainingRecordRepository trainingRecordRepository;
-    private final TaskRepository taskRepository;
     private final MemberDocumentRepository memberDocumentRepository;
+    private final DevelopmentRecordRepository developmentRecordRepository;
+    private final LearningRepository learningRepository;
+    private final TaskRepository taskRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(
             UserRepository userRepository,
             BranchRepository branchRepository,
-            LearningRepository learningRepository,
-            ExamRepository examRepository,
             MemberProfileRepository memberProfileRepository,
-            DevelopmentRecordRepository developmentRecordRepository,
-            TrainingPlanRepository trainingPlanRepository,
-            TrainingRecordRepository trainingRecordRepository,
-            TaskRepository taskRepository,
             MemberDocumentRepository memberDocumentRepository,
+            DevelopmentRecordRepository developmentRecordRepository,
+            LearningRepository learningRepository,
+            TaskRepository taskRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
-        this.learningRepository = learningRepository;
-        this.examRepository = examRepository;
         this.memberProfileRepository = memberProfileRepository;
-        this.developmentRecordRepository = developmentRecordRepository;
-        this.trainingPlanRepository = trainingPlanRepository;
-        this.trainingRecordRepository = trainingRecordRepository;
-        this.taskRepository = taskRepository;
         this.memberDocumentRepository = memberDocumentRepository;
+        this.developmentRecordRepository = developmentRecordRepository;
+        this.learningRepository = learningRepository;
+        this.taskRepository = taskRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -93,230 +79,135 @@ public class DataSeeder implements ApplicationRunner {
             return;
         }
 
-        Branch demo = branch("示范党支部", "演示用本支部（secretary 所属）");
-        Branch other = branch("第二党支部", "对照支部（用于验证书记不可跨支部）");
+        // ======================== 支部 ========================
+        Branch branch1 = createBranch("第一党支部", "测试主支部");
+        Branch branch2 = createBranch("第二党支部", "用于验证跨支部权限隔离");
 
-        userRepository.save(user("admin", "admin123", "系统管理员", Role.ADMIN, null));
+        // ======================== 用户（仅管理员 + 正式党员） ========================
 
-        // —— 示范党支部 ——
-        userRepository.save(user("secretary", "sec123", "示范支部书记", Role.SECRETARY, demo.getId()));
-        User member = userRepository.save(
-                user("member", "mem123", "普通党员", Role.MEMBER, demo.getId()));
-        User zhang = userRepository.save(
-                user("zhangwei", "mem123", "张伟", Role.MEMBER, demo.getId()));
-        User li = userRepository.save(
-                user("lina", "mem123", "李娜", Role.MEMBER, demo.getId()));
-        User wang = userRepository.save(
-                user("wangfang", "mem123", "王芳", Role.MEMBER, demo.getId()));
+        // —— 管理员 ——
+        User admin = createUser("admin", "admin123", "系统管理员", Role.ADMIN, null);
+
+        // —— 第一党支部 ——
+        User sec1 = createUser("secretary", "sec123", "张书记", Role.SECRETARY, branch1.getId());
+        User m1 = createUser("zhangsan", "mem123", "张三", Role.MEMBER, branch1.getId());
 
         // —— 第二党支部 ——
-        userRepository.save(user("secretary2", "sec123", "第二支部书记", Role.SECRETARY, other.getId()));
-        User zhao = userRepository.save(
-                user("zhaoqiang", "mem123", "赵强", Role.MEMBER, other.getId()));
-        User chen = userRepository.save(
-                user("chenxi", "mem123", "陈曦", Role.MEMBER, other.getId()));
+        User sec2 = createUser("secretary2", "sec123", "李书记", Role.SECRETARY, branch2.getId());
+        User m4 = createUser("zhaoliu", "mem123", "赵六", Role.MEMBER, branch2.getId());
 
-        // 档案
-        memberProfileRepository.save(profile(
-                member.getId(), "MALE", "汉族", LocalDate.of(1990, 5, 12),
-                "13800001001", "本科", "工学学士", "示范单位党委", "干事",
-                LocalDate.of(2015, 7, 1), LocalDate.of(2016, 7, 1),
-                MemberStatus.FORMAL, null, null, null, null, null));
-        memberProfileRepository.save(profile(
-                zhang.getId(), "MALE", "汉族", LocalDate.of(1988, 3, 8),
-                "13800001002", "硕士", "法学硕士", "示范单位办公室", "科员",
-                LocalDate.of(2018, 1, 15), LocalDate.of(2019, 1, 15),
-                MemberStatus.FORMAL, null, null, null, null, null));
-        memberProfileRepository.save(profile(
-                li.getId(), "FEMALE", "回族", LocalDate.of(1995, 11, 20),
-                "13800001003", "本科", "文学学士", "示范单位宣传部", "干事",
-                LocalDate.of(2024, 6, 1), null,
-                MemberStatus.PROBATIONARY, null, null, null, null, null));
-        memberProfileRepository.save(profile(
-                wang.getId(), "FEMALE", "汉族", LocalDate.of(1992, 9, 3),
-                "13800001004", "本科", null, "驻外协作单位", "专员",
-                LocalDate.of(2017, 5, 1), LocalDate.of(2018, 5, 1),
-                MemberStatus.FLOATING, "上海市浦东新区",
-                LocalDate.of(2025, 3, 1), "因工作需要长期驻外",
-                LocalDate.of(2027, 3, 1), "13800001004"));
-        memberProfileRepository.save(profile(
-                zhao.getId(), "MALE", "汉族", LocalDate.of(1985, 2, 14),
-                "13900002001", "本科", null, "第二单位", "主任",
-                LocalDate.of(2010, 3, 1), LocalDate.of(2011, 3, 1),
-                MemberStatus.FORMAL, null, null, null, null, null));
-        memberProfileRepository.save(profile(
-                chen.getId(), "FEMALE", "汉族", LocalDate.of(1998, 7, 22),
-                "13900002002", "硕士", null, "第二单位", "助理",
-                LocalDate.of(2023, 12, 1), null,
-                MemberStatus.PROBATIONARY, null, null, null, null, null));
+        // ======================== 党员档案 ========================
 
-        // ===== 档案材料种子数据 =====
-        Long uploaderId = userRepository.findByUsername("admin").orElseThrow().getId();
+        // 张书记（正式党员 - 有账号）
+        createProfile(sec1.getId(), "MALE", "汉族", LocalDate.of(1982, 5, 10),
+                "13800000101", "硕士", "法学硕士", "市委组织部", "支部书记",
+                LocalDate.of(2005, 7, 1), LocalDate.of(2006, 7, 1), MemberStatus.FORMAL);
 
-        // 正式党员 张伟：入党申请书 + 入党志愿书 + 转正申请书（完整3类）
-        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.APPLICATION,
-                "张伟 - 入党申请书", "zhangwei_application.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.VOLUNTEER_FORM,
-                "张伟 - 入党志愿书", "zhangwei_volunteer.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(zhang.getId(), DocType.CONVERSION_APPLICATION,
-                "张伟 - 转正申请书", "zhangwei_conversion.pdf", uploaderId));
+        // 张三（正式党员 - 有账号）
+        createProfile(m1.getId(), "MALE", "汉族", LocalDate.of(1990, 3, 15),
+                "13800000102", "本科", "工学学士", "市工信局", "科长",
+                LocalDate.of(2015, 6, 1), LocalDate.of(2016, 6, 1), MemberStatus.FORMAL);
 
-        // 正式党员 普通党员(member)：入党申请书 + 入党志愿书 + 转正申请书
-        memberDocumentRepository.save(memberDoc(member.getId(), DocType.APPLICATION,
-                "普通党员 - 入党申请书", "member_application.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(member.getId(), DocType.VOLUNTEER_FORM,
-                "普通党员 - 入党志愿书", "member_volunteer.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(member.getId(), DocType.CONVERSION_APPLICATION,
-                "普通党员 - 转正申请书", "member_conversion.pdf", uploaderId));
+        // 李四（预备党员 - 无账号，纯档案）
+        createProfile(null, "FEMALE", "回族", LocalDate.of(1996, 11, 8),
+                "13800000103", "硕士", "文学硕士", "市委宣传部", "干事",
+                LocalDate.of(2024, 9, 1), null, MemberStatus.PROBATIONARY);
 
-        // 预备党员 李娜：入党申请书 + 思想汇报 + 入党志愿书（缺转正申请书）
-        memberDocumentRepository.save(memberDoc(li.getId(), DocType.APPLICATION,
-                "李娜 - 入党申请书", "lina_application.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(li.getId(), DocType.THOUGHT_REPORT,
-                "2024年第一季度思想汇报", "lina_thought_q1.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(li.getId(), DocType.VOLUNTEER_FORM,
-                "李娜 - 入党志愿书", "lina_volunteer.pdf", uploaderId));
+        // 王五（流动党员 - 无账号，纯档案）
+        createProfile(null, "MALE", "汉族", LocalDate.of(1988, 7, 22),
+                "13800000104", "本科", "管理学学士", "外派协作单位", "项目主管",
+                LocalDate.of(2012, 4, 1), LocalDate.of(2013, 4, 1),
+                MemberStatus.FLOATING,
+                "广州市天河区", LocalDate.of(2025, 1, 1),
+                "长期驻外项目需要", LocalDate.of(2026, 12, 31), "13800000104");
 
-        // 流动党员 王芳：入党申请书 + 思想汇报
-        memberDocumentRepository.save(memberDoc(wang.getId(), DocType.APPLICATION,
-                "王芳 - 入党申请书", "wangfang_application.pdf", uploaderId));
-        memberDocumentRepository.save(memberDoc(wang.getId(), DocType.THOUGHT_REPORT,
-                "王芳 - 思想汇报", "wangfang_thought.pdf", uploaderId));
+        // 李书记（正式党员 - 有账号）
+        createProfile(sec2.getId(), "MALE", "汉族", LocalDate.of(1979, 12, 5),
+                "13800000200", "博士", "管理学博士", "市财政局党委", "支部书记",
+                LocalDate.of(2002, 9, 1), LocalDate.of(2003, 9, 1), MemberStatus.FORMAL);
 
-        log.info("Seeded {} member documents", memberDocumentRepository.count());
+        // 赵六（正式党员 - 有账号）
+        createProfile(m4.getId(), "FEMALE", "汉族", LocalDate.of(1993, 1, 30),
+                "13800000201", "本科", "经济学学士", "市财政局", "副主任",
+                LocalDate.of(2018, 10, 1), LocalDate.of(2019, 10, 1), MemberStatus.FORMAL);
 
-        // 发展记录（本支部 + 外支部各一条）
-        developmentRecordRepository.save(dev(
-                li.getId(), DevelopmentStage.PROBATIONARY,
-                LocalDate.of(2024, 6, 1), null, "示范支部预备党员考察中"));
-        developmentRecordRepository.save(dev(
-                zhang.getId(), DevelopmentStage.FORMAL,
-                LocalDate.of(2018, 1, 15), LocalDate.of(2019, 1, 15), "已转正"));
-        developmentRecordRepository.save(dev(
-                chen.getId(), DevelopmentStage.ACTIVIST,
-                LocalDate.of(2023, 6, 1), LocalDate.of(2023, 11, 30), "第二支部积极分子（书记不可见）"));
+        // ======================== 档案材料（仅正式党员） ========================
+        Long uploaderId = admin.getId();
 
-        // 学习内容
-        learningRepository.save(learning("党章学习导读", "党章总纲与党员义务概要", null));
-        LearningContent branchLearning = learningRepository.save(
-                learning("支部工作条例要点", "党支部工作条例精读摘要", demo.getId()));
-        learningRepository.save(learning("廉洁自律准则", "党员廉洁自律基本规范", demo.getId()));
-        learningRepository.save(learning("第二支部专题学习", "仅第二支部可见的学习材料", other.getId()));
+        createDoc(m1.getId(), DocType.APPLICATION, "张三 - 入党申请书", "zhangsan_application.pdf", uploaderId);
+        createDoc(m1.getId(), DocType.VOLUNTEER_FORM, "张三 - 入党志愿书", "zhangsan_volunteer.pdf", uploaderId);
+        createDoc(m1.getId(), DocType.CONVERSION_APPLICATION, "张三 - 转正申请书", "zhangsan_conversion.pdf", uploaderId);
 
-        // 考试
-        Exam demoExam = examRepository.save(exam("党纪基础知识测验", ExamStatus.OPEN, demo.getId()));
-        examRepository.save(exam("第二支部专项测验", ExamStatus.DRAFT, other.getId()));
+        // ======================== 发展记录 ========================
+        createDevRecord(m1.getId(), DevelopmentStage.FORMAL,
+                LocalDate.of(2015, 6, 1), LocalDate.of(2016, 6, 1), "已按期转正");
 
-        // 培训计划（全局）+ 完成记录（分支部）
-        TrainingPlan theory = trainingPlanRepository.save(
-                plan("党的创新理论专题", "集中学习习近平新时代中国特色社会主义思想", "THEORY"));
-        TrainingPlan practice = trainingPlanRepository.save(
-                plan("基层实践锻炼", "参与支部主题党日与志愿服务", "PRACTICE"));
-        trainingRecordRepository.save(completed(theory.getId(), member.getId()));
-        trainingRecordRepository.save(completed(theory.getId(), zhang.getId()));
-        trainingRecordRepository.save(completed(practice.getId(), zhao.getId())); // 外支部完成记录
+        // ======================== 学习内容 ========================
+        LearningContent lc1 = createLearning("党章学习导读", "学习党章总纲与党员义务，理解党的基本路线", null);
+        LearningContent lc2 = createLearning("支部工作条例要点", "《中国共产党支部工作条例（试行）》精读", branch1.getId());
+        createLearning("廉洁自律准则学习", "党员廉洁自律基本规范与典型案例", branch1.getId());
+        createLearning("第二支部专题学习", "仅第二党支部可见的学习材料", branch2.getId());
 
-        // 任务：本支部草稿、全平台、外支部（用于对照权限）
-        taskRepository.save(task(
-                "本支部党章精读任务",
-                "示范支部党员完成支部学习材料",
-                TaskType.LEARNING,
-                TaskStatus.DRAFT,
-                "BRANCH",
-                String.valueOf(demo.getId()),
-                branchLearning.getId(),
-                LocalDateTime.now().plusDays(14)));
-        taskRepository.save(task(
-                "全平台廉洁教育",
-                "全体党员学习廉洁自律准则",
-                TaskType.LEARNING,
-                TaskStatus.ACTIVE,
-                "ALL",
-                null,
-                null,
-                LocalDateTime.now().plusDays(30)));
-        taskRepository.save(task(
-                "第二支部专项考试任务",
-                "仅第二支部目标（示范书记不可派发）",
-                TaskType.EXAM,
-                TaskStatus.DRAFT,
-                "BRANCH",
-                String.valueOf(other.getId()),
-                null,
-                LocalDateTime.now().plusDays(7)));
-        taskRepository.save(task(
-                "本支部党纪测验",
-                "示范支部开放考试",
-                TaskType.EXAM,
-                TaskStatus.ACTIVE,
-                "BRANCH",
-                String.valueOf(demo.getId()),
-                demoExam.getId(),
-                LocalDateTime.now().plusDays(21)));
+        // ======================== 任务 ========================
+        createTask("党章精读任务", "全体党员完成党章学习",
+                TaskType.LEARNING, TaskStatus.ACTIVE, "ALL", null,
+                lc1.getId(), LocalDateTime.now().plusDays(14));
+        createTask("支部工作条例学习", "第一党支部成员学习支部工作条例",
+                TaskType.LEARNING, TaskStatus.ACTIVE, "BRANCH", String.valueOf(branch1.getId()),
+                lc2.getId(), LocalDateTime.now().plusDays(21));
+        createTask("第二支部专项任务", "第二党支部专属任务（验证权限隔离）",
+                TaskType.LEARNING, TaskStatus.DRAFT, "BRANCH", String.valueOf(branch2.getId()),
+                null, LocalDateTime.now().plusDays(7));
 
-        log.info(
-                "Seeded branches demoId={} otherId={}, users={}, profiles={}, tasks={}, exams={}",
-                demo.getId(),
-                other.getId(),
+        log.info("Seed complete: {} users, {} branches, {} profiles, {} docs, {} dev-records, {} learnings, {} tasks",
                 userRepository.count(),
+                branchRepository.count(),
                 memberProfileRepository.count(),
-                taskRepository.count(),
-                examRepository.count());
-        log.info(
-                "Demo logins: admin/admin123 | secretary/sec123 (示范) | secretary2/sec123 (第二) | member*/mem123");
+                memberDocumentRepository.count(),
+                developmentRecordRepository.count(),
+                learningRepository.count(),
+                taskRepository.count());
+        log.info("Test logins (仅正式党员可登录):");
+        log.info("  admin/admin123 (管理员)");
+        log.info("  secretary/sec123 (第一支部张书记)  zhangsan/mem123 (张三·正式)");
+        log.info("  secretary2/sec123 (第二支部李书记)  zhaoliu/mem123 (赵六·正式)");
+        log.info("  李四(预备)·王五(流动) 仅存档案，无登录账号");
     }
 
-    private Branch branch(String name, String description) {
-        Branch branch = new Branch();
-        branch.setName(name);
-        branch.setDescription(description);
-        return branchRepository.save(branch);
+    // ======================== 工厂方法 ========================
+
+    private Branch createBranch(String name, String description) {
+        Branch b = new Branch();
+        b.setName(name);
+        b.setDescription(description);
+        return branchRepository.save(b);
     }
 
-    private User user(String username, String rawPassword, String name, Role role, Long branchId) {
-        User user = new User();
-        user.setUsername(username);
-        user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        user.setName(name);
-        user.setRole(role);
-        user.setBranchId(branchId);
-        return user;
+    private User createUser(String username, String rawPassword, String name, Role role, Long branchId) {
+        User u = new User();
+        u.setUsername(username);
+        u.setPasswordHash(passwordEncoder.encode(rawPassword));
+        u.setName(name);
+        u.setRole(role);
+        u.setBranchId(branchId);
+        return userRepository.save(u);
     }
 
-    private LearningContent learning(String title, String summary, Long branchId) {
-        LearningContent content = new LearningContent();
-        content.setTitle(title);
-        content.setSummary(summary);
-        content.setBranchId(branchId);
-        return content;
+    private MemberProfile createProfile(
+            Long userId, String gender, String ethnicity, LocalDate birthDate,
+            String phone, String education, String degree, String workplace, String position,
+            LocalDate joinDate, LocalDate formalDate, MemberStatus status) {
+        return createProfile(userId, gender, ethnicity, birthDate, phone, education, degree,
+                workplace, position, joinDate, formalDate, status,
+                null, null, null, null, null);
     }
 
-    private Exam exam(String title, ExamStatus status, Long branchId) {
-        Exam exam = new Exam();
-        exam.setTitle(title);
-        exam.setStatus(status);
-        exam.setBranchId(branchId);
-        return exam;
-    }
-
-    private MemberProfile profile(
-            Long userId,
-            String gender,
-            String ethnicity,
-            LocalDate birthDate,
-            String phone,
-            String education,
-            String degree,
-            String workplace,
-            String position,
-            LocalDate joinDate,
-            LocalDate formalDate,
-            MemberStatus status,
-            String floatingLocation,
-            LocalDate floatingStartDate,
-            String floatingReason,
-            LocalDate floatingExpectedReturn,
-            String floatingContact) {
+    private MemberProfile createProfile(
+            Long userId, String gender, String ethnicity, LocalDate birthDate,
+            String phone, String education, String degree, String workplace, String position,
+            LocalDate joinDate, LocalDate formalDate, MemberStatus status,
+            String floatingLocation, LocalDate floatingStartDate, String floatingReason,
+            LocalDate floatingExpectedReturn, String floatingContact) {
         MemberProfile p = new MemberProfile();
         p.setUserId(userId);
         p.setGender(gender);
@@ -335,47 +226,42 @@ public class DataSeeder implements ApplicationRunner {
         p.setFloatingReason(floatingReason);
         p.setFloatingExpectedReturn(floatingExpectedReturn);
         p.setFloatingContact(floatingContact);
-        return p;
+        return memberProfileRepository.save(p);
     }
 
-    private DevelopmentRecord dev(
-            Long userId, DevelopmentStage stage, LocalDate start, LocalDate end, String notes) {
+    private MemberDocument createDoc(Long userId, DocType docType, String title, String fileName, Long uploaderId) {
+        MemberDocument d = new MemberDocument();
+        d.setUserId(userId);
+        d.setDocType(docType);
+        d.setTitle(title);
+        d.setFileUrl("member-documents/" + userId + "/" + docType.name() + "/seed_" + fileName);
+        d.setFileName(fileName);
+        d.setUploadedAt(LocalDateTime.now().minusDays(30));
+        d.setUploaderId(uploaderId);
+        return memberDocumentRepository.save(d);
+    }
+
+    private DevelopmentRecord createDevRecord(Long userId, DevelopmentStage stage,
+            LocalDate start, LocalDate end, String notes) {
         DevelopmentRecord r = new DevelopmentRecord();
         r.setUserId(userId);
         r.setStage(stage);
         r.setStartDate(start);
         r.setEndDate(end);
         r.setNotes(notes);
-        return r;
+        return developmentRecordRepository.save(r);
     }
 
-    private TrainingPlan plan(String title, String description, String planType) {
-        TrainingPlan p = new TrainingPlan();
-        p.setTitle(title);
-        p.setDescription(description);
-        p.setPlanType(planType);
-        p.setStatus("ACTIVE");
-        return p;
+    private LearningContent createLearning(String title, String summary, Long branchId) {
+        LearningContent lc = new LearningContent();
+        lc.setTitle(title);
+        lc.setSummary(summary);
+        lc.setBranchId(branchId);
+        return learningRepository.save(lc);
     }
 
-    private TrainingRecord completed(Long planId, Long userId) {
-        TrainingRecord r = new TrainingRecord();
-        r.setPlanId(planId);
-        r.setUserId(userId);
-        r.setCompleted(true);
-        r.setCompletedAt(LocalDateTime.now().minusDays(3));
-        return r;
-    }
-
-    private Task task(
-            String title,
-            String description,
-            TaskType type,
-            TaskStatus status,
-            String targetType,
-            String targetBranchIds,
-            Long referenceId,
-            LocalDateTime dueDate) {
+    private Task createTask(String title, String description, TaskType type, TaskStatus status,
+            String targetType, String targetBranchIds, Long referenceId, LocalDateTime dueDate) {
         Task t = new Task();
         t.setTitle(title);
         t.setDescription(description);
@@ -385,19 +271,6 @@ public class DataSeeder implements ApplicationRunner {
         t.setTargetBranchIds(targetBranchIds);
         t.setReferenceId(referenceId);
         t.setDueDate(dueDate);
-        return t;
-    }
-
-    private MemberDocument memberDoc(
-            Long userId, DocType docType, String title, String fileName, Long uploaderId) {
-        MemberDocument doc = new MemberDocument();
-        doc.setUserId(userId);
-        doc.setDocType(docType);
-        doc.setTitle(title);
-        doc.setFileUrl("member-documents/" + userId + "/" + docType.name() + "/seed_" + fileName);
-        doc.setFileName(fileName);
-        doc.setUploadedAt(LocalDateTime.now().minusDays(30));
-        doc.setUploaderId(uploaderId);
-        return doc;
+        return taskRepository.save(t);
     }
 }

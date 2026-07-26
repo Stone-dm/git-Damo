@@ -67,7 +67,7 @@ class AuthControllerTest {
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"member","password":"mem123"}
+                                {"username":"zhangsan","password":"mem123"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").isString())
@@ -82,7 +82,7 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.username").value("member"))
+                .andExpect(jsonPath("$.data.username").value("zhangsan"))
                 .andExpect(jsonPath("$.data.role").value("MEMBER"));
     }
 
@@ -112,7 +112,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"member","password":"mem123","client":"WEB"}
+                                {"username":"zhangsan","password":"mem123","client":"WEB"}
                                 """))
                 .andExpect(result -> {
                     int status = result.getResponse().getStatus();
@@ -158,7 +158,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"member","password":"mem123","client":"MOBILE"}
+                                {"username":"zhangsan","password":"mem123","client":"MOBILE"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))

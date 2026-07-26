@@ -30,7 +30,7 @@ class KnowledgeControllerTest {
 
     @Test
     void uploadMarksFailedWhenAgentDown() throws Exception {
-        String token = login("member", "mem123");
+        String token = login("zhangsan", "mem123");
 
         mockMvc.perform(post("/api/knowledge/upload")
                         .header("Authorization", "Bearer " + token)
@@ -52,7 +52,7 @@ class KnowledgeControllerTest {
 
     @Test
     void listReturnsUploadedDocuments() throws Exception {
-        String token = login("member", "mem123");
+        String token = login("zhangsan", "mem123");
 
         mockMvc.perform(post("/api/knowledge/upload")
                         .header("Authorization", "Bearer " + token)
@@ -77,7 +77,7 @@ class KnowledgeControllerTest {
 
     @Test
     void secretaryListExcludesOtherMembersPersonalDocs() throws Exception {
-        String memberToken = login("member", "mem123");
+        String memberToken = login("zhangsan", "mem123");
         String secretaryToken = login("secretary", "sec123");
 
         mockMvc.perform(post("/api/knowledge/upload")
@@ -116,7 +116,7 @@ class KnowledgeControllerTest {
 
     @Test
     void recommendReturns503WhenAgentDown() throws Exception {
-        String token = login("member", "mem123");
+        String token = login("zhangsan", "mem123");
 
         mockMvc.perform(post("/api/agent/recommend")
                         .header("Authorization", "Bearer " + token)
@@ -131,7 +131,7 @@ class KnowledgeControllerTest {
 
     @Test
     void chatReturns503WhenAgentDown() throws Exception {
-        String token = login("member", "mem123");
+        String token = login("zhangsan", "mem123");
 
         mockMvc.perform(post("/api/agent/chat")
                         .header("Authorization", "Bearer " + token)

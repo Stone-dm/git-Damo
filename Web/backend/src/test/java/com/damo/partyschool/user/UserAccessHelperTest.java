@@ -29,7 +29,7 @@ class UserAccessHelperTest {
 
     @Test
     void secretaryRequireAccessibleUser_sameBranchMember_ok() {
-        User member = userRepository.findByUsername("member").orElseThrow();
+        User member = userRepository.findByUsername("zhangsan").orElseThrow();
         User secretary = userRepository.findByUsername("secretary").orElseThrow();
         UserPrincipal actor = new UserPrincipal(secretary);
         User found = userService.requireAccessibleUser(actor, member.getId());
