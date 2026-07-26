@@ -66,6 +66,14 @@ public class TaskController {
         return ApiResponse.ok(taskService.closeTask(principal, id));
     }
 
+    @PostMapping("/{id}/reopen")
+    public ApiResponse<TaskView> reopen(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id) {
+        requireAuth(principal);
+        return ApiResponse.ok(taskService.reopenTask(principal, id));
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(
             @AuthenticationPrincipal UserPrincipal principal,

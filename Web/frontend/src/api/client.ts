@@ -59,6 +59,37 @@ export async function request<T>(
   return body.data;
 }
 
+/** 原始请求（不自动设置 Content-Type，用于 multipart/form-data 上传） */
+export async function requestRaw<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(options.headers);
+  const token = getToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+  });
+
+  let body: ApiResponse<T> | null = null;
+  try {
+    body = (await res.json()) as ApiResponse<T>;
+  } catch {
+    // non-JSON response
+  }
+
+  if (!res.ok || !body || body.code !== 0) {
+    const message = body?.message ?? `请求失败 (${res.status})`;
+    throw new ApiError(body?.code ?? res.status, message);
+  }
+
+  return body.data;
+}
+
 export async function login(
   username: string,
   password: string,

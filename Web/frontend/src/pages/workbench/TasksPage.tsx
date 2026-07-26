@@ -8,6 +8,7 @@ import {
   getBranchCompletion,
   getTaskProgress,
   listTasks,
+  reopenTask,
 } from '../../api/tasks';
 import { parseTask } from '../../api/agent';
 import { listBranches } from '../../api/branches';
@@ -269,6 +270,18 @@ export function WorkbenchTasksPage() {
     }
   };
 
+  const handleReopen = async (id: number) => {
+    setActionTaskId(id);
+    try {
+      await reopenTask(id);
+      await loadTasks();
+    } catch (err) {
+      setTasksError(errMsg(err));
+    } finally {
+      setActionTaskId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!window.confirm('确定要删除该任务吗？')) return;
     setActionTaskId(id);
@@ -453,6 +466,17 @@ export function WorkbenchTasksPage() {
                           )}
                           {t.status === 'CLOSED' && (
                             <>
+                              <button
+                                className="btn primary"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.82rem',
+                                }}
+                                disabled={actionTaskId === t.id}
+                                onClick={() => handleReopen(t.id)}
+                              >
+                                重新开放
+                              </button>
                               <button
                                 className="btn ghost"
                                 style={{

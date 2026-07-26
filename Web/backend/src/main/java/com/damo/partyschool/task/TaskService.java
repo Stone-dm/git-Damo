@@ -144,6 +144,21 @@ public class TaskService {
     }
 
     @Transactional
+    public TaskView reopenTask(UserPrincipal actor, Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertCanMutateTask(actor, task);
+
+        if (task.getStatus() != TaskStatus.CLOSED) {
+            throw new IllegalArgumentException("只能重新开放已关闭的任务");
+        }
+
+        task.setStatus(TaskStatus.ACTIVE);
+        task = taskRepository.save(task);
+        return TaskView.from(task);
+    }
+
+    @Transactional
     public void deleteTask(UserPrincipal actor, Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
