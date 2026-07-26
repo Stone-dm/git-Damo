@@ -53,7 +53,7 @@ export async function login(
 ): Promise<LoginResponse> {
   return request<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, client: 'MOBILE' }),
   });
 }
 

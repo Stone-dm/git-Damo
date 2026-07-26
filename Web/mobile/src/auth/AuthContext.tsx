@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { fetchMe, login as apiLogin } from '../api/client';
+import { fetchMe, login as apiLogin, ApiError } from '../api/client';
 import type { UserView } from '../api/types';
 import { getToken, loadToken, setToken } from './token';
 
@@ -41,6 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const me = await fetchMe();
+        if (me.role !== 'MEMBER') {
+          await setToken(null);
+          if (!cancelled) {
+            setUser(null);
+            setTokenState(null);
+          }
+          return;
+        }
         if (!cancelled) {
           setUser(me);
           setTokenState(stored);
@@ -66,6 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (username: string, password: string) => {
     const result = await apiLogin(username, password);
+    if (result.user.role !== 'MEMBER') {
+      await setToken(null);
+      throw new ApiError(403, '管理功能请使用 Web 端，移动端仅限党员使用');
+    }
     await setToken(result.token);
     setTokenState(result.token);
     setUser(result.user);
