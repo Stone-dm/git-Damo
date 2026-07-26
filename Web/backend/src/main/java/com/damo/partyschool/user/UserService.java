@@ -66,6 +66,14 @@ public class UserService {
         return UserView.from(target);
     }
 
+    @Transactional(readOnly = true)
+    public User requireAccessibleUser(UserPrincipal actor, Long userId) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+        assertCanView(actor, target);
+        return target;
+    }
+
     @Transactional
     public UserView create(UserPrincipal actor, UserRequest request) {
         assertCanWrite(actor, request.role(), request.branchId(), null);
