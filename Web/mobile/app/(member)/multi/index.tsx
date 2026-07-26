@@ -5,13 +5,18 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSmartBack } from '@/src/navigation/useSmartBack';
 import { colors } from '@/src/theme';
+
+const HERO_BG = require('../../../assets/images/multi-hero.png');
 
 type LearnType =
   | 'all'
@@ -126,6 +131,8 @@ const MODULES: {
 
 export default function MultiLearnScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const goBack = useSmartBack('/(member)/(tabs)/home');
   const [type, setType] = useState<LearnType>('all');
 
   const list = useMemo(
@@ -136,29 +143,43 @@ export default function MultiLearnScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.hint}>
-        按学习类型筛选渠道。完成任一路径后可进入统一测验。
-      </Text>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cats}
+      <ImageBackground
+        source={HERO_BG}
+        style={[styles.hero, { paddingTop: insets.top + 4 }]}
+        resizeMode="cover"
       >
-        {TYPE_TABS.map((t) => (
-          <Pressable
-            key={t.key}
-            style={[styles.cat, type === t.key && styles.catOn]}
-            onPress={() => setType(t.key)}
-          >
-            <Text style={[styles.catText, type === t.key && styles.catTextOn]}>
-              {t.label}
-            </Text>
+        <View style={styles.navRow}>
+          <Pressable onPress={goBack} hitSlop={12} style={styles.navBtn}>
+            <Text style={styles.navBtnText}>‹</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+          <Text style={styles.heroTitle}>多元自主学习</Text>
+          <View style={styles.navBtn}>
+            <Text style={styles.navBtnText}>☆</Text>
+          </View>
+        </View>
+        <Text style={styles.heroSub}>选择适合你的学习方式</Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cats}
+        >
+          {TYPE_TABS.map((t) => (
+            <Pressable
+              key={t.key}
+              style={[styles.cat, type === t.key && styles.catOn]}
+              onPress={() => setType(t.key)}
+            >
+              <Text style={[styles.catText, type === t.key && styles.catTextOn]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </ImageBackground>
 
       <ScrollView
+        style={styles.sheet}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       >
@@ -189,27 +210,67 @@ export default function MultiLearnScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  hint: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 18,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+  hero: {
+    paddingBottom: 14,
   },
-  cats: { paddingHorizontal: 12, paddingVertical: 12, gap: 8 },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  navBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBtnText: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '600',
+    lineHeight: 30,
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  heroSub: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  cats: {
+    paddingHorizontal: 12,
+    gap: 8,
+    paddingBottom: 4,
+  },
   cat: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.22)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.35)',
     marginRight: 8,
   },
-  catOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  catText: { color: colors.muted, fontWeight: '600', fontSize: 12 },
-  catTextOn: { color: '#fff' },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
+  catOn: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  catText: { color: '#fff', fontWeight: '600', fontSize: 12 },
+  catTextOn: { color: colors.primary },
+  sheet: {
+    flex: 1,
+    marginTop: -12,
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
+  list: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,

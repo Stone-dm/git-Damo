@@ -3,14 +3,19 @@
  */
 import { useRouter } from 'expo-router';
 import {
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLearningLocalState } from '@/src/hooks/useLearningLocalState';
+import { useSmartBack } from '@/src/navigation/useSmartBack';
 import { colors } from '@/src/theme';
+
+const HERO_BG = require('../../../assets/images/vr-hero.png');
 
 const FEATURES = [
   { title: '全景漫游', icon: '景' },
@@ -27,87 +32,108 @@ const HOT = [
 
 export default function VrScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const goBack = useSmartBack('/(member)/(tabs)/home');
   const { markChannelDone } = useLearningLocalState();
 
   return (
     <ScrollView
       style={styles.root}
       contentContainerStyle={{ paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>沉浸体验红色场景</Text>
-        <Text style={styles.bannerSub}>传承革命精神 · VR 实景研学</Text>
-        <Pressable
-          style={styles.bannerBtn}
-          onPress={async () => {
-            await markChannelDone('vr');
-            router.push('/(member)/loop/quiz' as never);
-          }}
-        >
-          <Text style={styles.bannerBtnText}>开始探索 ›</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.featRow}>
-        {FEATURES.map((f) => (
-          <View key={f.title} style={styles.featItem}>
-            <View style={styles.featIcon}>
-              <Text style={styles.featIconText}>{f.icon}</Text>
-            </View>
-            <Text style={styles.featTitle}>{f.title}</Text>
-          </View>
-        ))}
-      </View>
-
-      <Text style={styles.section}>热门场景</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+      <ImageBackground
+        source={HERO_BG}
+        style={[styles.banner, { paddingTop: insets.top + 4 }]}
+        resizeMode="cover"
       >
-        {HOT.map((h) => (
-          <View key={h.id} style={styles.hotCard}>
-            <View style={styles.hotImg}>
-              <Text style={styles.hotImgText}>{h.title.slice(0, 2)}</Text>
-              <View style={styles.vrTag}>
-                <Text style={styles.vrTagText}>VR</Text>
-              </View>
-            </View>
-            <Text style={styles.hotTitle}>{h.title}</Text>
+        <View style={styles.navRow}>
+          <Pressable onPress={goBack} hitSlop={12} style={styles.navBtn}>
+            <Text style={styles.navBtnText}>‹</Text>
+          </Pressable>
+          <Text style={styles.pageTitle}>VR红色实景研学</Text>
+          <View style={styles.navBtn}>
+            <Text style={styles.shareText}>⤴</Text>
           </View>
-        ))}
-      </ScrollView>
-
-      <View style={styles.marchBox}>
-        <Text style={styles.marchTitle}>重走长征路 · 运动地图闯关</Text>
-        <View style={styles.marchStats}>
-          <Text style={styles.stat}>里程 2450 km</Text>
-          <Text style={styles.stat}>积分 860</Text>
-          <Text style={styles.stat}>第 6 关</Text>
         </View>
-        <View style={styles.path}>
-          {['瑞金', '遵义', '泸定', '延安'].map((p, i) => (
-            <View key={p} style={styles.pathNode}>
-              <View style={[styles.dot, i < 3 && styles.dotOn]} />
-              <Text style={styles.pathText}>{p}</Text>
+
+        <View style={styles.bannerBody}>
+          <Text style={styles.bannerTitle}>沉浸式体验红色场景</Text>
+          <Text style={styles.bannerSub}>传承革命精神</Text>
+          <Pressable
+            style={styles.bannerBtn}
+            onPress={async () => {
+              await markChannelDone('vr');
+              router.push('/(member)/loop/quiz' as never);
+            }}
+          >
+            <Text style={styles.bannerBtnText}>开始探索 ›</Text>
+          </Pressable>
+        </View>
+      </ImageBackground>
+
+      <View style={styles.sheet}>
+        <View style={styles.featRow}>
+          {FEATURES.map((f) => (
+            <View key={f.title} style={styles.featItem}>
+              <View style={styles.featIcon}>
+                <Text style={styles.featIconText}>{f.icon}</Text>
+              </View>
+              <Text style={styles.featTitle}>{f.title}</Text>
             </View>
           ))}
         </View>
-        <Pressable
-          style={styles.continueBtn}
-          onPress={() => router.push('/(member)/loop/march' as never)}
-        >
-          <Text style={styles.continueText}>继续闯关</Text>
-        </Pressable>
-      </View>
 
-      <Text style={[styles.section, { marginTop: 8 }]}>学习排行榜</Text>
-      <View style={styles.rankBox}>
-        {['李娜 · 920', '张伟 · 880', '王芳 · 850'].map((line, i) => (
-          <Text key={line} style={styles.rankLine}>
-            {i + 1}. {line}
-          </Text>
-        ))}
+        <Text style={styles.section}>热门场景</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+        >
+          {HOT.map((h) => (
+            <View key={h.id} style={styles.hotCard}>
+              <View style={styles.hotImg}>
+                <Text style={styles.hotImgText}>{h.title.slice(0, 2)}</Text>
+                <View style={styles.vrTag}>
+                  <Text style={styles.vrTagText}>VR</Text>
+                </View>
+              </View>
+              <Text style={styles.hotTitle}>{h.title}</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={styles.marchBox}>
+          <Text style={styles.marchTitle}>重走长征路 · 运动地图闯关</Text>
+          <View style={styles.marchStats}>
+            <Text style={styles.stat}>里程 2450 km</Text>
+            <Text style={styles.stat}>积分 860</Text>
+            <Text style={styles.stat}>第 6 关</Text>
+          </View>
+          <View style={styles.path}>
+            {['瑞金', '遵义', '泸定', '延安'].map((p, i) => (
+              <View key={p} style={styles.pathNode}>
+                <View style={[styles.dot, i < 3 && styles.dotOn]} />
+                <Text style={styles.pathText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+          <Pressable
+            style={styles.continueBtn}
+            onPress={() => router.push('/(member)/loop/march' as never)}
+          >
+            <Text style={styles.continueText}>继续闯关</Text>
+          </Pressable>
+        </View>
+
+        <Text style={[styles.section, { marginTop: 8 }]}>学习排行榜</Text>
+        <View style={styles.rankBox}>
+          {['李娜 · 920', '张伟 · 880', '王芳 · 850'].map((line, i) => (
+            <Text key={line} style={styles.rankLine}>
+              {i + 1}. {line}
+            </Text>
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -116,24 +142,72 @@ export default function VrScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   banner: {
-    margin: 16,
-    borderRadius: 16,
-    backgroundColor: colors.primaryDark,
-    padding: 18,
-    minHeight: 140,
-    justifyContent: 'flex-end',
+    minHeight: 280,
+    justifyContent: 'space-between',
   },
-  bannerTitle: { color: '#fff', fontSize: 20, fontWeight: '800' },
-  bannerSub: { color: '#fecaca', marginTop: 6, fontSize: 12 },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  navBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBtnText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '600',
+    lineHeight: 32,
+  },
+  shareText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  pageTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  bannerBody: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  bannerSub: {
+    color: '#fff',
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.95,
+  },
   bannerBtn: {
-    marginTop: 12,
+    marginTop: 14,
     alignSelf: 'flex-start',
     backgroundColor: colors.gold,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
-  bannerBtnText: { color: '#7a5a00', fontWeight: '800', fontSize: 12 },
+  bannerBtnText: { color: '#7a5a00', fontWeight: '800', fontSize: 13 },
+  sheet: {
+    marginTop: -16,
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingTop: 18,
+  },
   featRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',

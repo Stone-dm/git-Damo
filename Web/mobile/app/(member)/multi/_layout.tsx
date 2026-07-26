@@ -14,7 +14,10 @@ export default function MultiLayout() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="index" options={{ title: '多元自主学习' }} />
+      <Stack.Screen
+        name="index"
+        options={{ title: '多元自主学习', headerShown: false }}
+      />
     </Stack>
   );
 }

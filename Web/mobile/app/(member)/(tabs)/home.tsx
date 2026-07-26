@@ -3,6 +3,7 @@
  */
 import { useRouter } from 'expo-router';
 import {
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/auth/AuthContext';
 import { useLearningLocalState } from '@/src/hooks/useLearningLocalState';
 import { colors } from '@/src/theme';
+
+const HERO_BG = require('../../../assets/images/home-hero.png');
 
 const QUICK = [
   { key: 'multi', title: '多元自主学习', icon: '学', route: '/(member)/multi' },
@@ -54,22 +57,28 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 28 + insets.bottom }}
       >
         {/* 红色顶区 + 搜索 */}
-        <LinearGradient
-          colors={[colors.primary, colors.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <ImageBackground
+          source={HERO_BG}
           style={[styles.hero, { paddingTop: insets.top + 8 }]}
+          resizeMode="cover"
         >
-          <View style={styles.heroDecor}>
-            <Text style={styles.heroDecorText}>🏛️</Text>
+          <View style={styles.brandBlock}>
+            <Text style={styles.brandTitle}>党校党建学习平台</Text>
+            <Text style={styles.brandSlogan}>学思想 · 强党性 · 重实践 · 建新功</Text>
           </View>
-          <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>⌕</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="搜索学习内容"
-              placeholderTextColor="#9ca3af"
-            />
+
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>⌕</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="搜索学习内容"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+            <View style={styles.bellBtn}>
+              <Text style={styles.bellText}>🔔</Text>
+            </View>
           </View>
 
           {/* 用户信息卡 */}
@@ -103,7 +112,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-        </LinearGradient>
+        </ImageBackground>
 
         {/* 五入口 */}
         <View style={styles.quickRow}>
@@ -171,9 +180,7 @@ export default function HomeScreen() {
               <Pressable
                 key={t.id}
                 style={styles.taskCard}
-                onPress={() =>
-                  router.push('/(member)/study' as never)
-                }
+                onPress={() => router.push('/(member)/study' as never)}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.taskTitle}>{t.title}</Text>
@@ -197,28 +204,54 @@ const styles = StyleSheet.create({
   hero: {
     paddingHorizontal: 16,
     paddingBottom: 20,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
     overflow: 'hidden',
   },
-  heroDecor: {
-    position: 'absolute',
-    right: 12,
-    top: 40,
-    opacity: 0.2,
+  brandBlock: {
+    marginBottom: 12,
+    paddingRight: 100,
   },
-  heroDecorText: { fontSize: 64 },
+  brandTitle: {
+    color: colors.gold,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  brandSlogan: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 6,
+    letterSpacing: 1,
+    opacity: 0.95,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
   searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 22,
     paddingHorizontal: 14,
     height: 40,
-    marginBottom: 14,
   },
   searchIcon: { color: '#9ca3af', fontSize: 16, marginRight: 6 },
   searchInput: { flex: 1, color: colors.text, fontSize: 14, padding: 0 },
+  bellBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellText: { fontSize: 16 },
   userCard: {
     backgroundColor: '#fff',
     borderRadius: 16,

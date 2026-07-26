@@ -17,7 +17,10 @@ export default function LoopLayout() {
       }}
     >
       <Stack.Screen name="theory" options={{ title: '图文/视频理论学习' }} />
-      <Stack.Screen name="vr" options={{ title: 'VR 红色实景研学' }} />
+      <Stack.Screen
+        name="vr"
+        options={{ title: 'VR 红色实景研学', headerShown: false }}
+      />
       <Stack.Screen name="march" options={{ title: '重走长征路' }} />
       <Stack.Screen name="crowdfund" options={{ title: '党课众筹共创' }} />
       <Stack.Screen name="quiz" options={{ title: '线上答题测验' }} />
