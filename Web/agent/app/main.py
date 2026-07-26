@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI
 from app.api.chat import router as chat_router
 from app.api.health import router as health_router
 from app.api.ingest import router as ingest_router
+from app.api.parse_task import router as parse_task_router
 from app.api.recommend import router as recommend_router
 from app.config import get_settings
 from app.security import require_agent_token, warn_if_agent_token_unset
@@ -40,3 +41,4 @@ _secured = [Depends(require_agent_token)]
 app.include_router(ingest_router, dependencies=_secured)
 app.include_router(recommend_router, dependencies=_secured)
 app.include_router(chat_router, dependencies=_secured)
+app.include_router(parse_task_router, dependencies=_secured)

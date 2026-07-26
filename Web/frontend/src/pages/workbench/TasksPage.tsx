@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../api/client';
+import { ApiError } from '../../api/client';
 import {
   closeTask,
   createTask,
@@ -8,10 +8,11 @@ import {
   getBranchCompletion,
   getTaskProgress,
   listTasks,
-} from '../api/tasks';
-import { listBranches } from '../api/branches';
-import { listLearning } from '../api/learning';
-import { listExams } from '../api/exams';
+} from '../../api/tasks';
+import { parseTask } from '../../api/agent';
+import { listBranches } from '../../api/branches';
+import { listLearning } from '../../api/learning';
+import { listExams } from '../../api/exams';
 import type {
   BranchCompletionView,
   BranchView,
@@ -21,7 +22,7 @@ import type {
   TaskStatus,
   TaskType,
   TaskView,
-} from '../api/types';
+} from '../../api/types';
 
 // ---- helpers ----
 
@@ -53,7 +54,7 @@ function formatDate(d: string | null): string {
 
 type TabKey = 'list' | 'create' | 'progress';
 
-export function TasksPage() {
+export function WorkbenchTasksPage() {
   // ---- tab state ----
   const [tab, setTab] = useState<TabKey>('list');
 
@@ -79,6 +80,11 @@ export function TasksPage() {
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState(false);
+
+  // ---- AI parse state ----
+  const [aiInput, setAiInput] = useState('');
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // ---- ref data ----
   const [branches, setBranches] = useState<BranchView[]>([]);
@@ -167,6 +173,27 @@ export function TasksPage() {
     [loadTasks],
   );
 
+  // ---- AI parse task ----
+  const handleAiParse = async () => {
+    if (!aiInput.trim()) return;
+    setAiParsing(true);
+    setAiError(null);
+    try {
+      const result = await parseTask({ text: aiInput.trim() });
+      setCreateTitle(result.title);
+      setCreateType(result.type);
+      setCreateDesc(result.description);
+      setCreateTargetType(result.targetType);
+      setCreateTargetBranchIds(result.branchIds);
+      setCreateDueDate(result.deadline ?? '');
+      setCreateReferenceId(null);
+    } catch (err) {
+      setAiError(errMsg(err));
+    } finally {
+      setAiParsing(false);
+    }
+  };
+
   // ---- create task ----
   const handleCreate = async () => {
     if (!createTitle.trim()) {
@@ -188,13 +215,13 @@ export function TasksPage() {
         dueDate: createDueDate || undefined,
       });
       setCreateOk(true);
-      // reset form
       setCreateTitle('');
       setCreateDesc('');
       setCreateTargetType('ALL');
       setCreateTargetBranchIds([]);
       setCreateReferenceId(null);
       setCreateDueDate('');
+      setAiInput('');
     } catch (err) {
       setCreateError(errMsg(err));
     } finally {
@@ -266,8 +293,8 @@ export function TasksPage() {
   // ---- render ----
   return (
     <div className="page">
-      <h2>任务中心</h2>
-      <p className="muted">管理全平台学习与考试任务，派发任务并追踪各支部完成进度。</p>
+      <h2>任务管理</h2>
+      <p className="muted">组织生活 › 任务管理 — 下发学习与考试任务，追踪各支部完成进度。</p>
 
       {/* tab bar */}
       <div className="tab-bar">
@@ -453,6 +480,45 @@ export function TasksPage() {
         <div className="panel">
           <h3>创建新任务</h3>
 
+          {/* AI 智能任务下发 */}
+          <div className="ai-parse-section" style={{
+            marginBottom: 20,
+            padding: 16,
+            background: 'var(--surface-alt, #f8f9fc)',
+            borderRadius: 10,
+            border: '1px solid var(--border, #e2e8f0)',
+          }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, fontSize: '0.9rem' }}>
+              智能任务下发
+            </div>
+            <p className="muted" style={{ fontSize: '0.82rem', marginBottom: 10 }}>
+              用自然语言描述任务需求，AI 自动解析并填充表单。例如："给第一支部下发一个本周学习二十大报告的任务"
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="输入任务描述，如：给全体党员布置本月学习任务…"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAiParse(); }}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn primary"
+                disabled={aiParsing || !aiInput.trim()}
+                onClick={handleAiParse}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {aiParsing ? '解析中…' : 'AI 解析'}
+              </button>
+            </div>
+            {aiError && (
+              <div className="form-error" style={{ marginTop: 8 }}>
+                {aiError}
+              </div>
+            )}
+          </div>
+
           {createError && (
             <div className="form-error" style={{ marginBottom: 14 }}>
               {createError}
@@ -480,7 +546,7 @@ export function TasksPage() {
                     setCreateReferenceId(null);
                   }}
                 >
-                  📖 学习任务
+                  学习任务
                 </button>
                 <button
                   type="button"
@@ -490,7 +556,7 @@ export function TasksPage() {
                     setCreateReferenceId(null);
                   }}
                 >
-                  📝 考试任务
+                  考试任务
                 </button>
               </div>
             </label>
@@ -561,14 +627,14 @@ export function TasksPage() {
                   className={`task-type-btn${createTargetType === 'ALL' ? ' active' : ''}`}
                   onClick={() => setCreateTargetType('ALL')}
                 >
-                  🌐 全平台
+                  全平台
                 </button>
                 <button
                   type="button"
                   className={`task-type-btn${createTargetType === 'BRANCH' ? ' active' : ''}`}
                   onClick={() => setCreateTargetType('BRANCH')}
                 >
-                  📋 指定支部
+                  指定支部
                 </button>
               </div>
             </label>
