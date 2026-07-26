@@ -378,3 +378,100 @@ export interface TrainingRecordView {
   completed: boolean;
   completedAt: string | null;
 }
+
+// ---- 组织材料归档 ----
+
+export type ArchiveCategory =
+  | 'MEETING_BRANCH'
+  | 'MEETING_COMMITTEE'
+  | 'MEETING_GROUP'
+  | 'PARTY_LECTURE'
+  | 'THEME_DAY'
+  | 'ORG_LIFE'
+  | 'ELECTION'
+  | 'PLAN_SUMMARY'
+  | 'SUPERIOR_DOC';
+
+export interface BranchArchiveView {
+  id: number;
+  branchId: number;
+  category: ArchiveCategory;
+  title: string;
+  content: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  recordDate: string;
+  uploadedAt: string;
+  uploaderId: number;
+  // 三会一课结构化字段
+  hostUserId: number | null;
+  hostUserName: string | null;
+  recorderUserId: number | null;
+  recorderUserName: string | null;
+  expectedCount: number | null;
+  actualCount: number | null;
+  absentCount: number | null;
+  topics: string | null;
+  location: string | null;
+}
+
+export interface BranchArchiveRequest {
+  category: ArchiveCategory;
+  title: string;
+  content?: string;
+  recordDate?: string;
+  file?: File;
+}
+
+// ---- 志愿服务管理 ----
+
+export type ActivityStatus =
+  | 'DRAFT'
+  | 'PUBLISHED'
+  | 'ONGOING'
+  | 'FINISHED'
+  | 'CANCELLED';
+
+export type SignupStatus = 'SIGNED_UP' | 'PARTICIPATED' | 'ABSENT';
+
+export interface VolunteerActivityView {
+  id: number;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startTime: string;
+  endTime: string;
+  maxParticipants: number | null;
+  organizerId: number;
+  status: ActivityStatus;
+  signupCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VolunteerActivityRequest {
+  title: string;
+  description?: string;
+  location?: string;
+  startTime: string;
+  endTime: string;
+  maxParticipants?: number;
+}
+
+export interface VolunteerSignupView {
+  id: number;
+  activityId: number;
+  userId: number;
+  userName: string;
+  status: SignupStatus;
+  serviceHours: number | null;
+  notes: string | null;
+  signedUpAt: string;
+  participatedAt: string | null;
+}
+
+export interface VolunteerStats {
+  totalActivities: number;
+  totalParticipations: number;
+  totalServiceHours: number;
+}

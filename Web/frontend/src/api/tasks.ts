@@ -45,6 +45,11 @@ export function closeTask(id: number): Promise<TaskView> {
   return request<TaskView>(`/api/tasks/${id}/close`, { method: 'POST' });
 }
 
+/** 重新开放已关闭的任务 */
+export function reopenTask(id: number): Promise<TaskView> {
+  return request<TaskView>(`/api/tasks/${id}/reopen`, { method: 'POST' });
+}
+
 /** 获取某个任务的个人完成进度列表 */
 export function getTaskProgress(
   taskId: number,

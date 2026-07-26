@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArchivePage } from './workbench/ArchivePage';
+import { ArchiveMaterialPage } from './workbench/ArchiveMaterialPage';
 import { FloatingMembersPage } from './workbench/FloatingMembersPage';
 import { TrainingPage } from './workbench/TrainingPage';
 import { WorkbenchTasksPage } from './workbench/TasksPage';
@@ -164,6 +165,8 @@ export function DashboardPage() {
           <TrainingPage />
         ) : activeSection === 'org-life' && activePage === 'tasks' ? (
           <WorkbenchTasksPage />
+        ) : activeSection === 'org-life' && activePage === 'materials' ? (
+          <ArchiveMaterialPage />
         ) : activeSectionDef && activePageDef ? (
           <PlaceholderPage
             key={`${activeSection}/${activePage}`}
