@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArchivePage } from './workbench/ArchivePage';
 import { FloatingMembersPage } from './workbench/FloatingMembersPage';
 import { TrainingPage } from './workbench/TrainingPage';
+import { WorkbenchTasksPage } from './workbench/TasksPage';
 import { PlaceholderPage } from './workbench/PlaceholderPage';
 
 interface SubPage {
@@ -161,6 +162,8 @@ export function DashboardPage() {
           <FloatingMembersPage />
         ) : activeSection === 'member' && activePage === 'training' ? (
           <TrainingPage />
+        ) : activeSection === 'org-life' && activePage === 'tasks' ? (
+          <WorkbenchTasksPage />
         ) : activeSectionDef && activePageDef ? (
           <PlaceholderPage
             key={`${activeSection}/${activePage}`}
