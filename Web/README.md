@@ -6,27 +6,34 @@
 
 按下列顺序启动。前后端与 Agent 依赖基础设施；前端/移动端依赖 Backend `:8080`。
 
-### 1. Docker Compose（MySQL + Milvus）
+### 1. Docker 一键启动（推荐）
+
+默认一起启动：**MySQL + Agent + Backend + Frontend**（**不会**删掉 / 跳过 MySQL）。
 
 ```bash
 cd Web
-cp .env.example .env   # 按需填写 DEEPSEEK_API_KEY 等（见下文）
-docker compose up -d
+cp .env.example .env   # 按需填写 DEEPSEEK_API_KEY 等
+docker compose down
+docker compose up -d --build
 docker compose ps
 ```
 
-首次拉取镜像可能需要数分钟。就绪后应看到 `mysql`、`milvus`、`etcd`、`minio` 均为 `running`（MySQL healthcheck 通过后为 `healthy`）。
-
-```bash
-docker compose ps mysql
-docker compose exec mysql mysqladmin ping -h localhost
-```
+也可在仓库根目录执行同样的 `docker compose up -d --build`（根目录 `docker-compose.yml` 会 include `Web/`）。
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| MySQL | `localhost:3306` | 库名 `party_school` |
-| Milvus | `localhost:19530` | 向量检索 |
-| MinIO Console | `localhost:9001` | Milvus 对象存储（内部依赖） |
+| Frontend | `http://localhost` | nginx 反代 `/api` |
+| Backend | `http://localhost:8080` | Spring Boot |
+| Agent | `http://localhost:8000` | FastAPI |
+| MySQL | `localhost:3307` | 容器内仍是 3306；库名 `party_school` |
+| Milvus（本机已有） | `localhost:19530` | Agent 默认经 `host.docker.internal` 连接 |
+
+若本机 **没有** Milvus，才需要完整向量栈：
+
+```bash
+# .env 里把 MILVUS_HOST 改成 milvus
+docker compose --profile milvus up -d --build
+```
 
 停止：
 
@@ -35,7 +42,13 @@ docker compose down        # 保留数据卷
 docker compose down -v     # 清空数据卷
 ```
 
-### 2. Agent（venv + uvicorn，端口 8000）
+仅想本地起 MySQL、其余服务本机跑时：
+
+```bash
+docker compose up -d mysql
+```
+
+### 2. Agent（本机 venv + uvicorn，端口 8000）
 
 ```bash
 cd Web/agent
@@ -111,15 +124,18 @@ npx expo start
 | MySQL 应用用户 | `party` | `party123` | 库 `party_school`，见 `.env.example` |
 | MinIO | `minioadmin` | `minioadmin` | Milvus 依赖，一般无需直接使用 |
 
-**应用演示账号**（Backend 空库时由 `DataSeeder` 自动插入，同一演示支部）
+**应用演示账号**（Backend **空库**时由 `DataSeeder` 自动插入；已有用户则跳过。要重灌演示数据：清空 MySQL 后再启动 Backend，例如 `docker compose down -v` 后重建。）
 
-| 角色 | 用户名 | 密码 | Web 侧栏要点 |
-|------|--------|------|----------------|
-| 管理员 | `admin` | `admin123` | 含用户管理、支部管理等全部菜单 |
-| 支部书记 | `secretary` | `sec123` | 有用户管理；无支部管理 |
-| 普通党员 | `member` | `mem123` | 学习 / 考试占位 / 知识库 / 推荐 / 助手 |
+| 角色 | 用户名 | 密码 | 所属 | 说明 |
+|------|--------|------|------|------|
+| 管理员 | `admin` | `admin123` | — | 全局；可见两支部全部数据 |
+| 支部书记 | `secretary` | `sec123` | 示范党支部 | 仅本支部；对照账号 |
+| 支部书记 | `secretary2` | `sec123` | 第二党支部 | 用于验证跨支部隔离 |
+| 党员 | `member` | `mem123` | 示范党支部 | 正式党员 |
+| 党员 | `zhangwei` / `lina` / `wangfang` | `mem123` | 示范党支部 | 正式 / 预备 / 流动 |
+| 党员 | `zhaoqiang` / `chenxi` | `mem123` | 第二党支部 | 外支部对照（示范书记不可管） |
 
-登录页亦提示上述三组账号。
+种子还包含：党员档案、发展记录、培训计划与完成记录、本支部/全平台/外支部任务、两支部考试与学习内容。
 
 ---
 

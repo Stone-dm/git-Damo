@@ -1,9 +1,12 @@
 package com.damo.partyschool.training;
 
+import com.damo.partyschool.auth.UserPrincipal;
+import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
+import com.damo.partyschool.user.UserService;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,14 +17,17 @@ public class TrainingService {
     private final TrainingPlanRepository planRepository;
     private final TrainingRecordRepository recordRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     public TrainingService(
             TrainingPlanRepository planRepository,
             TrainingRecordRepository recordRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            UserService userService) {
         this.planRepository = planRepository;
         this.recordRepository = recordRepository;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     // ---- Plans ----
@@ -54,7 +60,8 @@ public class TrainingService {
     // ---- Records ----
 
     @Transactional
-    public TrainingRecordView markComplete(Long planId, Long userId) {
+    public TrainingRecordView markComplete(UserPrincipal actor, Long planId, Long userId) {
+        userService.requireAccessibleUser(actor, userId);
         TrainingRecord record = new TrainingRecord();
         record.setPlanId(planId);
         record.setUserId(userId);
@@ -65,14 +72,26 @@ public class TrainingService {
     }
 
     @Transactional(readOnly = true)
-    public List<TrainingRecordView> listRecordsByPlan(Long planId) {
-        return recordRepository.findByPlanId(planId).stream()
+    public List<TrainingRecordView> listRecordsByPlan(UserPrincipal actor, Long planId) {
+        List<TrainingRecordView> views = recordRepository.findByPlanId(planId).stream()
                 .map(this::toView)
                 .toList();
+        if (actor.getRole() == Role.SECRETARY) {
+            if (actor.getBranchId() == null) {
+                return List.of();
+            }
+            Set<Long> ownMemberIds = userRepository.findByBranchIdAndRole(actor.getBranchId(), Role.MEMBER)
+                    .stream()
+                    .map(User::getId)
+                    .collect(Collectors.toSet());
+            return views.stream().filter(v -> ownMemberIds.contains(v.userId())).toList();
+        }
+        return views;
     }
 
     @Transactional(readOnly = true)
-    public List<TrainingRecordView> listRecordsByUser(Long userId) {
+    public List<TrainingRecordView> listRecordsByUser(UserPrincipal actor, Long userId) {
+        userService.requireAccessibleUser(actor, userId);
         return recordRepository.findByUserId(userId).stream()
                 .map(this::toView)
                 .toList();

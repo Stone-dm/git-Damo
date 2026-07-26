@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { listBranches } from '../../api/branches';
 import { getMemberProfileByUserId, listMemberProfiles } from '../../api/member-profiles';
 import type { BranchView, MemberProfileView } from '../../api/types';
+import { useAuth } from '../../auth/AuthContext';
 
 function errMsg(err: unknown): string {
   return err instanceof ApiError ? err.message : '请求失败';
@@ -15,9 +16,14 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function ArchivePage() {
+  const { user } = useAuth();
+  const isSecretary = user?.role === 'SECRETARY';
+
   const [members, setMembers] = useState<MemberProfileView[]>([]);
   const [branches, setBranches] = useState<BranchView[]>([]);
-  const [filterBranch, setFilterBranch] = useState<number | null>(null);
+  const [filterBranch, setFilterBranch] = useState<number | null>(
+    () => (user?.role === 'SECRETARY' ? user.branchId : null),
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +36,7 @@ export function ArchivePage() {
     setError(null);
     try {
       const data = await listMemberProfiles(
-        branchId ? { branchId } : undefined,
+        branchId != null ? { branchId } : undefined,
       );
       setMembers(data);
     } catch (err) {
@@ -39,6 +45,12 @@ export function ArchivePage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (isSecretary && user?.branchId != null) {
+      setFilterBranch(user.branchId);
+    }
+  }, [isSecretary, user?.branchId]);
 
   useEffect(() => {
     load(filterBranch);
@@ -66,26 +78,34 @@ export function ArchivePage() {
   return (
     <div className="page">
       <h2>档案管理</h2>
-      <p className="muted">查看和管理全体党员的详细档案信息</p>
+      <p className="muted">
+        {isSecretary
+          ? '查看和管理本支部党员的详细档案信息'
+          : '查看和管理全体党员的详细档案信息'}
+      </p>
 
       {/* filter bar */}
       <div className="archive-toolbar">
-        <label>
-          <span className="archive-filter-label">按支部筛选：</span>
-          <select
-            value={filterBranch ?? ''}
-            onChange={(e) =>
-              setFilterBranch(e.target.value ? Number(e.target.value) : null)
-            }
-          >
-            <option value="">全部支部</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {isSecretary ? (
+          <span className="archive-filter-label">本支部档案</span>
+        ) : (
+          <label>
+            <span className="archive-filter-label">按支部筛选：</span>
+            <select
+              value={filterBranch ?? ''}
+              onChange={(e) =>
+                setFilterBranch(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">全部支部</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <span className="muted" style={{ fontSize: '0.85rem' }}>
           共 {members.length} 人
         </span>

@@ -58,7 +58,7 @@ public class TrainingController {
             @PathVariable Long planId,
             @PathVariable Long userId) {
         requireAuth(principal);
-        return ApiResponse.ok(service.markComplete(planId, userId));
+        return ApiResponse.ok(service.markComplete(principal, planId, userId));
     }
 
     @GetMapping("/plans/{planId}/records")
@@ -66,7 +66,7 @@ public class TrainingController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long planId) {
         requireAuth(principal);
-        return ApiResponse.ok(service.listRecordsByPlan(planId));
+        return ApiResponse.ok(service.listRecordsByPlan(principal, planId));
     }
 
     @GetMapping("/users/{userId}/records")
@@ -74,7 +74,7 @@ public class TrainingController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long userId) {
         requireAuth(principal);
-        return ApiResponse.ok(service.listRecordsByUser(userId));
+        return ApiResponse.ok(service.listRecordsByUser(principal, userId));
     }
 
     private void requireAuth(UserPrincipal principal) {

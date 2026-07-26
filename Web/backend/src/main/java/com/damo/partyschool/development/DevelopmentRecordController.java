@@ -30,7 +30,7 @@ public class DevelopmentRecordController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody DevelopmentRecordRequest request) {
         requireAuth(principal);
-        return ApiResponse.ok(service.create(request));
+        return ApiResponse.ok(service.create(principal, request));
     }
 
     /** 获取某党员的发展历程 */
@@ -39,7 +39,7 @@ public class DevelopmentRecordController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long userId) {
         requireAuth(principal);
-        return ApiResponse.ok(service.listByUser(userId));
+        return ApiResponse.ok(service.listByUser(principal, userId));
     }
 
     /** 按阶段筛选（如查看所有入党积极分子） */
@@ -49,9 +49,9 @@ public class DevelopmentRecordController {
             @RequestParam(value = "stage", required = false) DevelopmentStage stage) {
         requireAuth(principal);
         if (stage != null) {
-            return ApiResponse.ok(service.listByStage(stage));
+            return ApiResponse.ok(service.listByStage(principal, stage));
         }
-        return ApiResponse.ok(service.listAll());
+        return ApiResponse.ok(service.listAll(principal));
     }
 
     private void requireAuth(UserPrincipal principal) {

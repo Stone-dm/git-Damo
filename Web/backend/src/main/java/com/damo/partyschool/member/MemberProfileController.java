@@ -29,10 +29,7 @@ public class MemberProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(value = "branchId", required = false) Long branchId) {
         requireAuth(principal);
-        if (branchId != null) {
-            return ApiResponse.ok(service.listByBranch(branchId));
-        }
-        return ApiResponse.ok(service.listAll());
+        return ApiResponse.ok(service.listForActor(principal, branchId));
     }
 
     /** 获取单个党员的详细档案 */
@@ -41,7 +38,7 @@ public class MemberProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long userId) {
         requireAuth(principal);
-        return ApiResponse.ok(service.getByUserId(userId));
+        return ApiResponse.ok(service.getByUserId(principal, userId));
     }
 
     /** 创建或更新党员档案 */
@@ -50,7 +47,7 @@ public class MemberProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody MemberProfileRequest request) {
         requireAuth(principal);
-        return ApiResponse.ok(service.createOrUpdate(request));
+        return ApiResponse.ok(service.createOrUpdate(principal, request));
     }
 
     /** 获取流动党员列表 */
@@ -58,7 +55,7 @@ public class MemberProfileController {
     public ApiResponse<List<MemberProfileView>> listFloating(
             @AuthenticationPrincipal UserPrincipal principal) {
         requireAuth(principal);
-        return ApiResponse.ok(service.listFloating());
+        return ApiResponse.ok(service.listFloating(principal));
     }
 
     private void requireAuth(UserPrincipal principal) {

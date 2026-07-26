@@ -188,6 +188,21 @@ export interface BranchCompletionView {
   completionRate: number; // 0-100
 }
 
+// ---- 智能任务解析 ----
+
+export interface ParseTaskRequest {
+  text: string;
+}
+
+export interface ParseTaskResponse {
+  title: string;
+  type: 'LEARNING' | 'EXAM';
+  description: string;
+  targetType: 'ALL' | 'BRANCH';
+  branchIds: number[];
+  deadline: string | null;
+}
+
 // ---- 党员管理 ----
 
 export type MemberStatus = 'FORMAL' | 'PROBATIONARY' | 'FLOATING';

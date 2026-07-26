@@ -1,0 +1,42 @@
+# Env / secrets
+.env
+.env.*
+!.env.example
+Web/.env
+Web/.env.*
+!Web/.env.example
+
+# Agent / local scratch
+.superpowers/
+
+# Design source assets (app uses Web/frontend/public/)
+Web/素材/
+
+# Accidental local tooling caches
+Web/frontend/nodejs/
+**/node_cache/
+
+# Dependencies & build outputs
+node_modules/
+dist/
+dist-ssr/
+target/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+.expo/
+web-build/
+
+# Logs / OS / IDE
+*.log
+logs/
+.idea/
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

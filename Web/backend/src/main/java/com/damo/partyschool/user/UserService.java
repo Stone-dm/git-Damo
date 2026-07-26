@@ -66,6 +66,14 @@ public class UserService {
         return UserView.from(target);
     }
 
+    @Transactional(readOnly = true)
+    public User requireAccessibleUser(UserPrincipal actor, Long userId) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+        assertCanView(actor, target);
+        return target;
+    }
+
     @Transactional
     public UserView create(UserPrincipal actor, UserRequest request) {
         assertCanWrite(actor, request.role(), request.branchId(), null);
@@ -125,7 +133,8 @@ public class UserService {
             case ADMIN -> {
             }
             case SECRETARY -> {
-                if (target.getRole() != Role.MEMBER
+                if (actor.getBranchId() == null
+                        || target.getRole() != Role.MEMBER
                         || !Objects.equals(actor.getBranchId(), target.getBranchId())) {
                     throw new AccessDeniedException("无权查看该用户");
                 }

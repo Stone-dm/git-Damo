@@ -1,12 +1,16 @@
 package com.damo.partyschool.member;
 
+import com.damo.partyschool.auth.UserPrincipal;
 import com.damo.partyschool.branch.Branch;
 import com.damo.partyschool.branch.BranchRepository;
+import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
+import com.damo.partyschool.user.UserService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,18 +21,22 @@ public class MemberProfileService {
     private final MemberProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
+    private final UserService userService;
 
     public MemberProfileService(
             MemberProfileRepository profileRepository,
             UserRepository userRepository,
-            BranchRepository branchRepository) {
+            BranchRepository branchRepository,
+            UserService userService) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
+        this.userService = userService;
     }
 
     @Transactional
-    public MemberProfileView createOrUpdate(MemberProfileRequest request) {
+    public MemberProfileView createOrUpdate(UserPrincipal actor, MemberProfileRequest request) {
+        userService.requireAccessibleUser(actor, request.userId());
         MemberProfile profile = profileRepository.findByUserId(request.userId())
                 .orElseGet(MemberProfile::new);
 
@@ -49,6 +57,20 @@ public class MemberProfileService {
 
         profile = profileRepository.save(profile);
         return toView(profile);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemberProfileView> listForActor(UserPrincipal actor, Long requestedBranchId) {
+        if (actor.getRole() == Role.ADMIN) {
+            if (requestedBranchId != null) {
+                return listByBranch(requestedBranchId);
+            }
+            return listAll();
+        }
+        if (actor.getBranchId() == null) {
+            return List.of();
+        }
+        return listByBranch(actor.getBranchId());
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +118,8 @@ public class MemberProfileService {
     }
 
     @Transactional(readOnly = true)
-    public MemberProfileView getByUserId(Long userId) {
+    public MemberProfileView getByUserId(UserPrincipal actor, Long userId) {
+        userService.requireAccessibleUser(actor, userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
         String branchName = user.getBranchId() != null
@@ -112,7 +135,7 @@ public class MemberProfileService {
     }
 
     @Transactional(readOnly = true)
-    public List<MemberProfileView> listFloating() {
+    public List<MemberProfileView> listFloating(UserPrincipal actor) {
         List<MemberProfile> floating = profileRepository.findByMemberStatus(MemberStatus.FLOATING);
         // Exclude orphaned profiles whose user has been deleted
         Map<Long, User> userMap = userRepository.findAll().stream()
@@ -120,7 +143,16 @@ public class MemberProfileService {
         List<MemberProfile> valid = floating.stream()
                 .filter(p -> userMap.containsKey(p.getUserId()))
                 .toList();
-        return toViewList(valid);
+        List<MemberProfileView> all = toViewList(valid);
+        if (actor.getRole() == Role.ADMIN) {
+            return all;
+        }
+        if (actor.getBranchId() == null) {
+            return List.of();
+        }
+        return all.stream()
+                .filter(v -> Objects.equals(v.branchId(), actor.getBranchId()))
+                .toList();
     }
 
     // ---- helpers ----
