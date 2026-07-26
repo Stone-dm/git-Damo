@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public record MemberProfileRequest(
         Long userId,
+        String name,
         String gender,
         String ethnicity,
         LocalDate birthDate,

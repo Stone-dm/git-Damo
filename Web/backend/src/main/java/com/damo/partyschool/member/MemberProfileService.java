@@ -3,7 +3,6 @@ package com.damo.partyschool.member;
 import com.damo.partyschool.auth.UserPrincipal;
 import com.damo.partyschool.branch.Branch;
 import com.damo.partyschool.branch.BranchRepository;
-import com.damo.partyschool.development.DevelopmentRecord;
 import com.damo.partyschool.development.DevelopmentRecordRepository;
 import com.damo.partyschool.development.DevelopmentStage;
 import com.damo.partyschool.user.Role;
@@ -51,6 +50,7 @@ public class MemberProfileService {
                 .orElseGet(MemberProfile::new);
 
         profile.setUserId(request.userId());
+        if (request.name() != null) profile.setName(request.name());
         if (request.gender() != null) profile.setGender(request.gender());
         if (request.ethnicity() != null) profile.setEthnicity(request.ethnicity());
         if (request.birthDate() != null) profile.setBirthDate(request.birthDate());
@@ -68,6 +68,12 @@ public class MemberProfileService {
         if (request.floatingReason() != null) profile.setFloatingReason(request.floatingReason());
         if (request.floatingExpectedReturn() != null) profile.setFloatingExpectedReturn(request.floatingExpectedReturn());
         if (request.floatingContact() != null) profile.setFloatingContact(request.floatingContact());
+
+        // 同步 branchId：有 userId 时直接从 User 取，保证数据一致
+        if (request.userId() != null) {
+            User user = userRepository.findById(request.userId()).orElse(null);
+            if (user != null) profile.setBranchId(user.getBranchId());
+        }
 
         profile = profileRepository.save(profile);
         return toView(profile);
@@ -89,26 +95,47 @@ public class MemberProfileService {
 
     @Transactional(readOnly = true)
     public List<MemberProfileView> listAll() {
-        // Return ALL users with role MEMBER, with or without profile
+        // 1. 有 User 账号的正式党员档案
         List<User> allMembers = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == com.damo.partyschool.user.Role.MEMBER)
+                .filter(u -> u.getRole() == Role.MEMBER)
                 .toList();
-        return buildProfileViews(allMembers);
+        List<MemberProfileView> result = new ArrayList<>(buildProfileViews(allMembers));
+
+        // 2. 无 User 账号的纯档案记录（预备/流动党员）
+        List<MemberProfile> orphans = profileRepository.findAll().stream()
+                .filter(p -> p.getUserId() == null)
+                .toList();
+        for (MemberProfile p : orphans) {
+            result.add(toView(p));
+        }
+
+        return result;
     }
 
     @Transactional(readOnly = true)
     public List<MemberProfileView> listByBranch(Long branchId) {
+        // 1. 该支部下有 User 账号的正式党员档案
         List<User> usersInBranch = userRepository.findAll().stream()
                 .filter(u -> branchId.equals(u.getBranchId())
-                        && u.getRole() == com.damo.partyschool.user.Role.MEMBER)
+                        && u.getRole() == Role.MEMBER)
                 .toList();
-        return buildProfileViews(usersInBranch);
+        List<MemberProfileView> result = new ArrayList<>(buildProfileViews(usersInBranch));
+
+        // 2. 该支部下无 User 账号的纯档案记录
+        List<MemberProfile> orphans = profileRepository.findAll().stream()
+                .filter(p -> p.getUserId() == null && branchId.equals(p.getBranchId()))
+                .toList();
+        for (MemberProfile p : orphans) {
+            result.add(toView(p));
+        }
+
+        return result;
     }
 
     private List<MemberProfileView> buildProfileViews(List<User> users) {
         List<Long> userIds = users.stream().map(User::getId).toList();
         Map<Long, MemberProfile> profileMap = profileRepository.findAll().stream()
-                .filter(p -> userIds.contains(p.getUserId()))
+                .filter(p -> p.getUserId() != null && userIds.contains(p.getUserId()))
                 .collect(Collectors.toMap(MemberProfile::getUserId, p -> p));
         Map<Long, Branch> branchMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, b -> b));
@@ -154,13 +181,10 @@ public class MemberProfileService {
     @Transactional(readOnly = true)
     public List<MemberProfileView> listFloating(UserPrincipal actor) {
         List<MemberProfile> floating = profileRepository.findByMemberStatus(MemberStatus.FLOATING);
-        // Exclude orphaned profiles whose user has been deleted
-        Map<Long, User> userMap = userRepository.findAll().stream()
-                .collect(Collectors.toMap(User::getId, u -> u));
-        List<MemberProfile> valid = floating.stream()
-                .filter(p -> userMap.containsKey(p.getUserId()))
+        // 同时包含有 User 和无 User 的流动党员
+        List<MemberProfileView> all = floating.stream()
+                .map(this::toView)
                 .toList();
-        List<MemberProfileView> all = toViewList(valid);
         if (actor.getRole() == Role.ADMIN) {
             return all;
         }
@@ -187,6 +211,7 @@ public class MemberProfileService {
         int statusOrdinal = -1;
         if (mp != null && mp.getMemberStatus() == MemberStatus.FORMAL) statusOrdinal = DevelopmentStage.FORMAL.ordinal();
         else if (mp != null && mp.getMemberStatus() == MemberStatus.PROBATIONARY) statusOrdinal = DevelopmentStage.PROBATIONARY.ordinal();
+        else if (mp != null && mp.getMemberStatus() == MemberStatus.FLOATING) statusOrdinal = DevelopmentStage.FORMAL.ordinal();
         // 取两者中更靠后的
         int best = Math.max(maxDevOrdinal, statusOrdinal);
         if (best >= 0) return DevelopmentStage.values()[best].name();
@@ -202,37 +227,53 @@ public class MemberProfileService {
         return map;
     }
 
-    private List<MemberProfileView> toViewList(List<MemberProfile> profiles) {
-        Map<Long, User> userMap = userRepository.findAll().stream()
-                .collect(Collectors.toMap(User::getId, u -> u));
-        Map<Long, Branch> branchMap = branchRepository.findAll().stream()
-                .collect(Collectors.toMap(Branch::getId, b -> b));
-        List<Long> userIds = profiles.stream().map(MemberProfile::getUserId).toList();
-        Map<Long, String> stageMap = buildStageMap(userIds);
+    /**
+     * 将 MemberProfile 转为 View，兼容 userId 为 null 的纯档案记录。
+     */
+    private MemberProfileView toView(MemberProfile p) {
+        String userName;
+        Long resolvedBranchId;
+        String branchName;
 
-        return profiles.stream()
-                .filter(p -> userMap.containsKey(p.getUserId())) // skip orphans
-                .map(p -> {
-                    User user = userMap.get(p.getUserId());
-                    String userName = user.getName();
-                    Long branchId = user.getBranchId();
-                    String branchName = branchId != null && branchMap.containsKey(branchId)
-                            ? branchMap.get(branchId).getName() : "—";
-                    return MemberProfileView.from(p, userName, branchId, branchName, stageMap.get(p.getUserId()));
-                })
-                .toList();
+        if (p.getUserId() != null) {
+            User user = userRepository.findById(p.getUserId()).orElse(null);
+            if (user != null) {
+                userName = user.getName();
+                resolvedBranchId = user.getBranchId();
+            } else {
+                userName = p.getName() != null ? p.getName() : getMemberStatusLabel(p.getMemberStatus());
+                resolvedBranchId = p.getBranchId();
+            }
+        } else {
+            // 无 User 关联：优先取 profile.name，无则用状态标签兜底
+            userName = p.getName() != null ? p.getName() : getMemberStatusLabel(p.getMemberStatus());
+            resolvedBranchId = p.getBranchId();
+        }
+
+        if (resolvedBranchId != null) {
+            branchName = branchRepository.findById(resolvedBranchId).map(Branch::getName).orElse("—");
+        } else {
+            branchName = "—";
+        }
+
+        String stage = p.getUserId() != null ? resolveStage(p.getUserId()) : getStatusStage(p.getMemberStatus());
+        return MemberProfileView.from(p, userName, resolvedBranchId, branchName, stage);
     }
 
-    private MemberProfileView toView(MemberProfile p) {
-        User user = userRepository.findById(p.getUserId()).orElse(null);
-        String userName = user != null ? user.getName() : "—";
-        Long branchId = user != null ? user.getBranchId() : null;
-        String branchName = "—";
-        if (branchId != null) {
-            branchName = branchRepository.findById(branchId).map(Branch::getName).orElse("—");
-        }
-        String stage = resolveStage(p.getUserId());
-        return MemberProfileView.from(p, userName, branchId, branchName, stage);
+    private static String getMemberStatusLabel(MemberStatus status) {
+        return switch (status) {
+            case FORMAL -> "正式党员（档案）";
+            case PROBATIONARY -> "预备党员（档案）";
+            case FLOATING -> "流动党员（档案）";
+        };
+    }
+
+    private static String getStatusStage(MemberStatus status) {
+        return switch (status) {
+            case FORMAL -> DevelopmentStage.FORMAL.name();
+            case PROBATIONARY -> DevelopmentStage.PROBATIONARY.name();
+            case FLOATING -> DevelopmentStage.FORMAL.name();
+        };
     }
 
     // ---- 流动党员管理 ----

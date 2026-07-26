@@ -169,11 +169,13 @@ export function TrainingPage() {
 
   // ---- stage stats ----
   const stageStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const s of STAGE_ORDER) counts[s] = 0;
-    for (const r of stageRecords) counts[r.stage] = (counts[r.stage] || 0) + 1;
-    return STAGE_ORDER.map((s) => ({ stage: s, label: STAGE_LABEL[s], color: STAGE_COLORS[s], count: counts[s] }));
-  }, [stageRecords]);
+    return STAGE_ORDER.map((s) => ({
+      stage: s,
+      label: STAGE_LABEL[s],
+      color: STAGE_COLORS[s],
+      count: members.filter((m) => m.currentStage === s).length,
+    }));
+  }, [members]);
 
   // ---- detail modal ----
   const openDetail = async (m: MemberProfileView) => {

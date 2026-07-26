@@ -28,6 +28,13 @@ public class MemberProfile {
     @Column(unique = true)
     private Long userId;
 
+    /** 所属支部（用于无 User 账号的预备党员也能归属到支部） */
+    private Long branchId;
+
+    /** 姓名（用于无 User 账号的预备党员档案显示） */
+    @Column(length = 64)
+    private String name;
+
     // ---- 基础信息 ----
 
     @Column(length = 8)

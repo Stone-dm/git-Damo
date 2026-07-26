@@ -35,8 +35,9 @@ import com.damo.partyschool.user.UserRepository;
 /**
  * 空库时写入测试数据，便于开发调试。
  *
- * 只有正式党员（FORMAL）才有 User 登录账号；
- * 预备党员（PROBATIONARY）和流动党员（FLOATING）仅存党员档案，不在用户表出现。
+ * 规则：
+ * - 正式党员/流动党员（流动党员属于正式党员行列）→ 有 User 登录账号
+ * - 预备党员 → 仅存档案，无 User 账号，通过 profile.name 显示姓名
  */
 @Component
 public class DataSeeder implements ApplicationRunner {
@@ -83,7 +84,7 @@ public class DataSeeder implements ApplicationRunner {
         Branch branch1 = createBranch("第一党支部", "测试主支部");
         Branch branch2 = createBranch("第二党支部", "用于验证跨支部权限隔离");
 
-        // ======================== 用户（仅管理员 + 正式党员） ========================
+        // ======================== 用户 ========================
 
         // —— 管理员 ——
         User admin = createUser("admin", "admin123", "系统管理员", Role.ADMIN, null);
@@ -91,6 +92,7 @@ public class DataSeeder implements ApplicationRunner {
         // —— 第一党支部 ——
         User sec1 = createUser("secretary", "sec123", "张书记", Role.SECRETARY, branch1.getId());
         User m1 = createUser("zhangsan", "mem123", "张三", Role.MEMBER, branch1.getId());
+        User m3 = createUser("wangwu", "mem123", "王五", Role.MEMBER, branch1.getId());
 
         // —— 第二党支部 ——
         User sec2 = createUser("secretary2", "sec123", "李书记", Role.SECRETARY, branch2.getId());
@@ -98,36 +100,42 @@ public class DataSeeder implements ApplicationRunner {
 
         // ======================== 党员档案 ========================
 
-        // 张书记（正式党员 - 有账号）
-        createProfile(sec1.getId(), "MALE", "汉族", LocalDate.of(1982, 5, 10),
+        // 张书记（正式党员）
+        createProfile(sec1.getId(), branch1.getId(), null,
+                "MALE", "汉族", LocalDate.of(1982, 5, 10),
                 "13800000101", "硕士", "法学硕士", "市委组织部", "支部书记",
                 LocalDate.of(2005, 7, 1), LocalDate.of(2006, 7, 1), MemberStatus.FORMAL);
 
-        // 张三（正式党员 - 有账号）
-        createProfile(m1.getId(), "MALE", "汉族", LocalDate.of(1990, 3, 15),
+        // 张三（正式党员）
+        createProfile(m1.getId(), branch1.getId(), null,
+                "MALE", "汉族", LocalDate.of(1990, 3, 15),
                 "13800000102", "本科", "工学学士", "市工信局", "科长",
                 LocalDate.of(2015, 6, 1), LocalDate.of(2016, 6, 1), MemberStatus.FORMAL);
 
-        // 李四（预备党员 - 无账号，纯档案）
-        createProfile(null, "FEMALE", "回族", LocalDate.of(1996, 11, 8),
+        // 李四（预备党员 - 无账号，纯档案，用 profile.name 显示姓名）
+        createProfile(null, branch1.getId(), "李四",
+                "FEMALE", "回族", LocalDate.of(1996, 11, 8),
                 "13800000103", "硕士", "文学硕士", "市委宣传部", "干事",
                 LocalDate.of(2024, 9, 1), null, MemberStatus.PROBATIONARY);
 
-        // 王五（流动党员 - 无账号，纯档案）
-        createProfile(null, "MALE", "汉族", LocalDate.of(1988, 7, 22),
+        // 王五（流动党员 - 有账号，流动党员属于正式党员行列）
+        createProfile(m3.getId(), branch1.getId(), null,
+                "MALE", "汉族", LocalDate.of(1988, 7, 22),
                 "13800000104", "本科", "管理学学士", "外派协作单位", "项目主管",
                 LocalDate.of(2012, 4, 1), LocalDate.of(2013, 4, 1),
                 MemberStatus.FLOATING,
                 "广州市天河区", LocalDate.of(2025, 1, 1),
                 "长期驻外项目需要", LocalDate.of(2026, 12, 31), "13800000104");
 
-        // 李书记（正式党员 - 有账号）
-        createProfile(sec2.getId(), "MALE", "汉族", LocalDate.of(1979, 12, 5),
+        // 李书记（正式党员）
+        createProfile(sec2.getId(), branch2.getId(), null,
+                "MALE", "汉族", LocalDate.of(1979, 12, 5),
                 "13800000200", "博士", "管理学博士", "市财政局党委", "支部书记",
                 LocalDate.of(2002, 9, 1), LocalDate.of(2003, 9, 1), MemberStatus.FORMAL);
 
-        // 赵六（正式党员 - 有账号）
-        createProfile(m4.getId(), "FEMALE", "汉族", LocalDate.of(1993, 1, 30),
+        // 赵六（正式党员）
+        createProfile(m4.getId(), branch2.getId(), null,
+                "FEMALE", "汉族", LocalDate.of(1993, 1, 30),
                 "13800000201", "本科", "经济学学士", "市财政局", "副主任",
                 LocalDate.of(2018, 10, 1), LocalDate.of(2019, 10, 1), MemberStatus.FORMAL);
 
@@ -160,18 +168,14 @@ public class DataSeeder implements ApplicationRunner {
                 null, LocalDateTime.now().plusDays(7));
 
         log.info("Seed complete: {} users, {} branches, {} profiles, {} docs, {} dev-records, {} learnings, {} tasks",
-                userRepository.count(),
-                branchRepository.count(),
-                memberProfileRepository.count(),
-                memberDocumentRepository.count(),
-                developmentRecordRepository.count(),
-                learningRepository.count(),
-                taskRepository.count());
-        log.info("Test logins (仅正式党员可登录):");
+                userRepository.count(), branchRepository.count(), memberProfileRepository.count(),
+                memberDocumentRepository.count(), developmentRecordRepository.count(),
+                learningRepository.count(), taskRepository.count());
+        log.info("Test logins (正式/流动党员可登录):");
         log.info("  admin/admin123 (管理员)");
-        log.info("  secretary/sec123 (第一支部张书记)  zhangsan/mem123 (张三·正式)");
-        log.info("  secretary2/sec123 (第二支部李书记)  zhaoliu/mem123 (赵六·正式)");
-        log.info("  李四(预备)·王五(流动) 仅存档案，无登录账号");
+        log.info("  secretary/sec123 (张书记)  zhangsan/mem123 (张三)  wangwu/mem123 (王五·流动)");
+        log.info("  secretary2/sec123 (李书记)  zhaoliu/mem123 (赵六)");
+        log.info("  李四(预备) 仅存档案，无登录账号");
     }
 
     // ======================== 工厂方法 ========================
@@ -194,22 +198,27 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private MemberProfile createProfile(
-            Long userId, String gender, String ethnicity, LocalDate birthDate,
+            Long userId, Long branchId, String name,
+            String gender, String ethnicity, LocalDate birthDate,
             String phone, String education, String degree, String workplace, String position,
             LocalDate joinDate, LocalDate formalDate, MemberStatus status) {
-        return createProfile(userId, gender, ethnicity, birthDate, phone, education, degree,
-                workplace, position, joinDate, formalDate, status,
+        return createProfile(userId, branchId, name, gender, ethnicity, birthDate,
+                phone, education, degree, workplace, position,
+                joinDate, formalDate, status,
                 null, null, null, null, null);
     }
 
     private MemberProfile createProfile(
-            Long userId, String gender, String ethnicity, LocalDate birthDate,
+            Long userId, Long branchId, String name,
+            String gender, String ethnicity, LocalDate birthDate,
             String phone, String education, String degree, String workplace, String position,
             LocalDate joinDate, LocalDate formalDate, MemberStatus status,
             String floatingLocation, LocalDate floatingStartDate, String floatingReason,
             LocalDate floatingExpectedReturn, String floatingContact) {
         MemberProfile p = new MemberProfile();
         p.setUserId(userId);
+        p.setBranchId(branchId);
+        p.setName(name);
         p.setGender(gender);
         p.setEthnicity(ethnicity);
         p.setBirthDate(birthDate);
