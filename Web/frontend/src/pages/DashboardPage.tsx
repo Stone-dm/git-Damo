@@ -5,6 +5,7 @@ import { FloatingMembersPage } from './workbench/FloatingMembersPage';
 import { TrainingPage } from './workbench/TrainingPage';
 import { WorkbenchTasksPage } from './workbench/TasksPage';
 import { PlaceholderPage } from './workbench/PlaceholderPage';
+import { VolunteerPage } from './workbench/VolunteerPage';
 
 interface SubPage {
   id: string;
@@ -167,6 +168,8 @@ export function DashboardPage() {
           <WorkbenchTasksPage />
         ) : activeSection === 'org-life' && activePage === 'materials' ? (
           <ArchiveMaterialPage />
+        ) : activeSection === 'party-work' && activePage === 'volunteer' ? (
+          <VolunteerPage />
         ) : activeSectionDef && activePageDef ? (
           <PlaceholderPage
             key={`${activeSection}/${activePage}`}

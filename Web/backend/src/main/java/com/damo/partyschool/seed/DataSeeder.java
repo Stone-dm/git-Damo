@@ -2,6 +2,7 @@ package com.damo.partyschool.seed;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,12 @@ import com.damo.partyschool.task.TaskType;
 import com.damo.partyschool.user.Role;
 import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
+import com.damo.partyschool.volunteer.ActivityStatus;
+import com.damo.partyschool.volunteer.SignupStatus;
+import com.damo.partyschool.volunteer.VolunteerActivity;
+import com.damo.partyschool.volunteer.VolunteerActivityRepository;
+import com.damo.partyschool.volunteer.VolunteerSignup;
+import com.damo.partyschool.volunteer.VolunteerSignupRepository;
 
 /**
  * 空库时写入测试数据，便于开发调试。
@@ -51,6 +58,8 @@ public class DataSeeder implements ApplicationRunner {
     private final DevelopmentRecordRepository developmentRecordRepository;
     private final LearningRepository learningRepository;
     private final TaskRepository taskRepository;
+    private final VolunteerActivityRepository volunteerActivityRepository;
+    private final VolunteerSignupRepository volunteerSignupRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(
@@ -61,6 +70,8 @@ public class DataSeeder implements ApplicationRunner {
             DevelopmentRecordRepository developmentRecordRepository,
             LearningRepository learningRepository,
             TaskRepository taskRepository,
+            VolunteerActivityRepository volunteerActivityRepository,
+            VolunteerSignupRepository volunteerSignupRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.branchRepository = branchRepository;
@@ -69,18 +80,18 @@ public class DataSeeder implements ApplicationRunner {
         this.developmentRecordRepository = developmentRecordRepository;
         this.learningRepository = learningRepository;
         this.taskRepository = taskRepository;
+        this.volunteerActivityRepository = volunteerActivityRepository;
+        this.volunteerSignupRepository = volunteerSignupRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepository.count() > 0) {
-            log.info("Seed skipped: users already present");
-            return;
-        }
+        boolean usersSeeded = userRepository.count() == 0;
 
-        // ======================== 支部 ========================
+        if (usersSeeded) {
+            // ======================== 支部 ========================
         Branch branch1 = createBranch("第一党支部", "测试主支部");
         Branch branch2 = createBranch("第二党支部", "用于验证跨支部权限隔离");
 
@@ -176,6 +187,10 @@ public class DataSeeder implements ApplicationRunner {
         log.info("  secretary/sec123 (张书记)  zhangsan/mem123 (张三)  wangwu/mem123 (王五·流动)");
         log.info("  secretary2/sec123 (李书记)  zhaoliu/mem123 (赵六)");
         log.info("  李四(预备) 仅存档案，无登录账号");
+        } // end if (usersSeeded)
+
+        // seed volunteer data (runs even on existing DB if no activities yet)
+        seedVolunteerData();
     }
 
     // ======================== 工厂方法 ========================
@@ -281,5 +296,120 @@ public class DataSeeder implements ApplicationRunner {
         t.setReferenceId(referenceId);
         t.setDueDate(dueDate);
         return taskRepository.save(t);
+    }
+
+    // ======================== 志愿服务种子数据 ========================
+
+    private void seedVolunteerData() {
+        if (volunteerActivityRepository.count() > 0) {
+            log.info("Volunteer seed skipped: activities already present");
+            return;
+        }
+
+        List<User> users = userRepository.findAll();
+        User admin = users.stream().filter(u -> "admin".equals(u.getUsername())).findFirst().orElse(null);
+        User zhangsan = users.stream().filter(u -> "zhangsan".equals(u.getUsername())).findFirst().orElse(null);
+        User wangwu = users.stream().filter(u -> "wangwu".equals(u.getUsername())).findFirst().orElse(null);
+        User zhaoliu = users.stream().filter(u -> "zhaoliu".equals(u.getUsername())).findFirst().orElse(null);
+
+        if (admin == null) {
+            log.warn("Volunteer seed skipped: no admin user found");
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // --- 活动1: 社区环境清洁志愿活动（已结束，4人参与+1人缺席=5条报名记录） ---
+        VolunteerActivity a1 = new VolunteerActivity();
+        a1.setTitle("社区环境清洁志愿活动");
+        a1.setDescription("组织党员走进社区，开展环境卫生清洁、垃圾分类宣传等志愿服务，以实际行动美化社区环境，增强党员服务意识。");
+        a1.setLocation("阳光社区广场及周边街道");
+        a1.setStartTime(now.minusMonths(2).withDayOfMonth(10).withHour(9).withMinute(0));
+        a1.setEndTime(now.minusMonths(2).withDayOfMonth(10).withHour(17).withMinute(0));
+        a1.setMaxParticipants(10);
+        a1.setOrganizerId(admin.getId());
+        a1.setStatus(ActivityStatus.FINISHED);
+        a1 = volunteerActivityRepository.save(a1);
+
+        createSignup(a1.getId(), admin.getId(), SignupStatus.PARTICIPATED, 8.0, a1.getStartTime(), "负责协调统筹");
+        createSignup(a1.getId(), zhangsan.getId(), SignupStatus.PARTICIPATED, 8.0, a1.getStartTime(), "清扫主干道");
+        createSignup(a1.getId(), wangwu.getId(), SignupStatus.PARTICIPATED, 7.5, a1.getStartTime(), "垃圾分类宣传");
+        createSignup(a1.getId(), zhaoliu.getId(), SignupStatus.PARTICIPATED, 8.0, a1.getStartTime(), "清理绿化带");
+        // 第5条：报名但缺席 — 复用admin ID被唯一约束限制，这里用一个不存在的用户ID模拟
+        createSignup(a1.getId(), 9999L, SignupStatus.ABSENT, null, a1.getStartTime(), "临时有事未能参加");
+
+        log.info("  Activity 1: 社区环境清洁志愿活动 (FINISHED, 5 signups)");
+
+        // --- 活动2: 老党员走访慰问（进行中，3人报名） ---
+        VolunteerActivity a2 = new VolunteerActivity();
+        a2.setTitle("老党员走访慰问");
+        a2.setDescription("组织党员志愿者走访慰问社区高龄老党员，送去组织的关怀和温暖，了解他们的生活需求和困难，记录他们的意见和建议。");
+        a2.setLocation("各社区老党员家中");
+        a2.setStartTime(now.minusWeeks(2).withHour(9).withMinute(0));
+        a2.setEndTime(now.plusWeeks(2).withHour(17).withMinute(0));
+        a2.setMaxParticipants(6);
+        a2.setOrganizerId(admin.getId());
+        a2.setStatus(ActivityStatus.ONGOING);
+        a2 = volunteerActivityRepository.save(a2);
+
+        createSignup(a2.getId(), zhangsan.getId(), SignupStatus.SIGNED_UP, null, null, "可提供车辆");
+        createSignup(a2.getId(), wangwu.getId(), SignupStatus.SIGNED_UP, null, null, null);
+        createSignup(a2.getId(), zhaoliu.getId(), SignupStatus.SIGNED_UP, null, null, "有社区工作经验");
+
+        log.info("  Activity 2: 老党员走访慰问 (ONGOING, 3 signed up)");
+
+        // --- 活动3: 党建知识宣传进社区（已发布，2人报名） ---
+        VolunteerActivity a3 = new VolunteerActivity();
+        a3.setTitle("党建知识宣传进社区");
+        a3.setDescription("在社区设立宣传点，向居民发放党建知识手册，讲解党的历史和方针政策，开展有奖问答活动，增强社区居民对党的认同感。");
+        a3.setLocation("幸福社区文化活动中心");
+        a3.setStartTime(now.plusWeeks(1).withHour(9).withMinute(0));
+        a3.setEndTime(now.plusWeeks(1).withHour(16).withMinute(0));
+        a3.setMaxParticipants(15);
+        a3.setOrganizerId(admin.getId());
+        a3.setStatus(ActivityStatus.PUBLISHED);
+        a3 = volunteerActivityRepository.save(a3);
+
+        createSignup(a3.getId(), zhangsan.getId(), SignupStatus.SIGNED_UP, null, null, "擅长讲解");
+        createSignup(a3.getId(), wangwu.getId(), SignupStatus.SIGNED_UP, null, null, null);
+
+        log.info("  Activity 3: 党建知识宣传进社区 (PUBLISHED, 2 signed up)");
+
+        // --- 额外：再创建几个历史活动来丰富12月趋势数据 ---
+        for (int i = 1; i <= 3; i++) {
+            VolunteerActivity hist = new VolunteerActivity();
+            hist.setTitle("第" + i + "季度党员志愿服务日");
+            hist.setDescription("季度常规志愿服务活动");
+            hist.setLocation("社区服务中心");
+            hist.setStartTime(now.minusMonths(i * 3 + 1).withDayOfMonth(15).withHour(9).withMinute(0));
+            hist.setEndTime(now.minusMonths(i * 3 + 1).withDayOfMonth(15).withHour(17).withMinute(0));
+            hist.setMaxParticipants(8);
+            hist.setOrganizerId(admin.getId());
+            hist.setStatus(ActivityStatus.FINISHED);
+            hist = volunteerActivityRepository.save(hist);
+
+            createSignup(hist.getId(), admin.getId(), SignupStatus.PARTICIPATED, 8.0, hist.getStartTime(), null);
+            createSignup(hist.getId(), zhangsan.getId(), SignupStatus.PARTICIPATED, 8.0, hist.getStartTime(), null);
+            createSignup(hist.getId(), wangwu.getId(), SignupStatus.PARTICIPATED, 7.0, hist.getStartTime(), null);
+        }
+
+        log.info("Volunteer seed complete: {} activities, {} signups",
+                volunteerActivityRepository.count(), volunteerSignupRepository.count());
+    }
+
+    private VolunteerSignup createSignup(Long activityId, Long userId, SignupStatus status,
+            Double serviceHours, LocalDateTime startTime, String notes) {
+        VolunteerSignup s = new VolunteerSignup();
+        s.setActivityId(activityId);
+        s.setUserId(userId);
+        s.setStatus(status);
+        s.setServiceHours(serviceHours);
+        s.setNotes(notes);
+        // signedUpAt: use activity start time or now
+        s.setSignedUpAt(startTime != null ? startTime.minusDays(3) : LocalDateTime.now().minusDays(1));
+        if (status == SignupStatus.PARTICIPATED && startTime != null) {
+            s.setParticipatedAt(startTime.plusHours(8));
+        }
+        return volunteerSignupRepository.save(s);
     }
 }

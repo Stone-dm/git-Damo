@@ -82,10 +82,11 @@ export function finishActivity(
 /** 党员报名活动 */
 export function signup(
   activityId: number,
+  notes?: string,
 ): Promise<VolunteerSignupView> {
   return request<VolunteerSignupView>(
     `/api/volunteer/activities/${activityId}/signup`,
-    { method: 'POST' },
+    { method: 'POST', body: JSON.stringify({ notes }) },
   );
 }
 

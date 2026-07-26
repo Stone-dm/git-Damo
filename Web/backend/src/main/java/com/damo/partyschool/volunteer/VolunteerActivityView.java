@@ -11,12 +11,13 @@ public record VolunteerActivityView(
         LocalDateTime endTime,
         Integer maxParticipants,
         Long organizerId,
+        String organizerName,
         ActivityStatus status,
         long signupCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {
 
-    public static VolunteerActivityView from(VolunteerActivity a, long signupCount) {
+    public static VolunteerActivityView from(VolunteerActivity a, long signupCount, String organizerName) {
         return new VolunteerActivityView(
                 a.getId(),
                 a.getTitle(),
@@ -26,6 +27,7 @@ public record VolunteerActivityView(
                 a.getEndTime(),
                 a.getMaxParticipants(),
                 a.getOrganizerId(),
+                organizerName,
                 a.getStatus(),
                 signupCount,
                 a.getCreatedAt(),

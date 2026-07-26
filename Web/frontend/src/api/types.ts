@@ -443,6 +443,7 @@ export interface VolunteerActivityView {
   endTime: string;
   maxParticipants: number | null;
   organizerId: number;
+  organizerName: string;
   status: ActivityStatus;
   signupCount: number;
   createdAt: string;
@@ -470,8 +471,27 @@ export interface VolunteerSignupView {
   participatedAt: string | null;
 }
 
+export interface MonthlyStats {
+  month: string;
+  activityCount: number;
+  serviceHours: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
 export interface VolunteerStats {
   totalActivities: number;
   totalParticipations: number;
   totalServiceHours: number;
+  thisMonthActivities: number;
+  thisMonthParticipations: number;
+  thisMonthServiceHours: number;
+  thisYearActivities: number;
+  thisYearParticipations: number;
+  thisYearServiceHours: number;
+  monthlyTrends: MonthlyStats[];
+  statusDistribution: StatusCount[];
 }

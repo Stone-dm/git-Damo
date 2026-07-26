@@ -6,7 +6,11 @@ import com.damo.partyschool.user.User;
 import com.damo.partyschool.user.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +35,22 @@ public class VolunteerService {
         this.userRepository = userRepository;
     }
 
+    // ---- helpers ----
+
+    private Map<Long, String> userNameMap() {
+        return userRepository.findAll().stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
+    }
+
+    private String organizerName(VolunteerActivity a, Map<Long, String> names) {
+        return names.getOrDefault(a.getOrganizerId(), "未知用户");
+    }
+
+    private VolunteerActivityView toView(VolunteerActivity a, Map<Long, String> names) {
+        return VolunteerActivityView.from(
+                a, signupRepository.countByActivityId(a.getId()), organizerName(a, names));
+    }
+
     // ---- Activity CRUD ----
 
     @Transactional
@@ -48,7 +68,7 @@ public class VolunteerService {
         activity.setStatus(ActivityStatus.DRAFT);
 
         activity = activityRepository.save(activity);
-        return VolunteerActivityView.from(activity, 0);
+        return toView(activity, userNameMap());
     }
 
     @Transactional(readOnly = true)
@@ -80,9 +100,8 @@ public class VolunteerService {
         // sort by startTime descending
         activities.sort((a, b) -> b.getStartTime().compareTo(a.getStartTime()));
 
-        return activities.stream()
-                .map(a -> VolunteerActivityView.from(a, signupRepository.countByActivityId(a.getId())))
-                .toList();
+        Map<Long, String> names = userNameMap();
+        return activities.stream().map(a -> toView(a, names)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +109,7 @@ public class VolunteerService {
         requireAuth(actor);
         VolunteerActivity activity = activityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("活动不存在"));
-        return VolunteerActivityView.from(activity, signupRepository.countByActivityId(activity.getId()));
+        return toView(activity, userNameMap());
     }
 
     @Transactional
@@ -112,7 +131,7 @@ public class VolunteerService {
         activity.setMaxParticipants(request.maxParticipants());
 
         activity = activityRepository.save(activity);
-        return VolunteerActivityView.from(activity, signupRepository.countByActivityId(activity.getId()));
+        return toView(activity, userNameMap());
     }
 
     @Transactional
@@ -145,7 +164,7 @@ public class VolunteerService {
 
         activity.setStatus(ActivityStatus.PUBLISHED);
         activity = activityRepository.save(activity);
-        return VolunteerActivityView.from(activity, signupRepository.countByActivityId(activity.getId()));
+        return toView(activity, userNameMap());
     }
 
     @Transactional
@@ -161,13 +180,13 @@ public class VolunteerService {
 
         activity.setStatus(ActivityStatus.FINISHED);
         activity = activityRepository.save(activity);
-        return VolunteerActivityView.from(activity, signupRepository.countByActivityId(activity.getId()));
+        return toView(activity, userNameMap());
     }
 
     // ---- Signup ----
 
     @Transactional
-    public VolunteerSignupView signup(UserPrincipal actor, Long activityId) {
+    public VolunteerSignupView signup(UserPrincipal actor, Long activityId, String notes) {
         if (actor.getRole() != Role.MEMBER) {
             throw new AccessDeniedException("仅党员可报名活动");
         }
@@ -198,6 +217,9 @@ public class VolunteerService {
         signup.setActivityId(activityId);
         signup.setUserId(actor.getId());
         signup.setStatus(SignupStatus.SIGNED_UP);
+        if (notes != null && !notes.isBlank()) {
+            signup.setNotes(notes.trim());
+        }
 
         signup = signupRepository.save(signup);
 
@@ -221,7 +243,6 @@ public class VolunteerService {
         VolunteerSignup signup = signupRepository.findByActivityIdAndUserId(activityId, actor.getId())
                 .orElseThrow(() -> new IllegalArgumentException("未报名该活动"));
 
-        // member can only cancel their own signup
         if (!signup.getUserId().equals(actor.getId())) {
             throw new AccessDeniedException("只能取消自己的报名");
         }
@@ -244,8 +265,7 @@ public class VolunteerService {
 
         List<VolunteerSignup> signups = signupRepository.findByActivityId(activityId);
 
-        Map<Long, String> userNames = userRepository.findAll().stream()
-                .collect(Collectors.toMap(User::getId, User::getName));
+        Map<Long, String> userNames = userNameMap();
 
         return signups.stream()
                 .map(s -> new VolunteerSignupView(
@@ -305,19 +325,90 @@ public class VolunteerService {
     public VolunteerStats getStats(UserPrincipal actor) {
         requireAuth(actor);
 
-        long totalActivities = activityRepository.count();
-
+        List<VolunteerActivity> allActivities = activityRepository.findAll();
         List<VolunteerSignup> allSignups = signupRepository.findAll();
-        long totalParticipations = allSignups.stream()
-                .filter(s -> s.getStatus() == SignupStatus.PARTICIPATED)
-                .count();
 
-        double totalServiceHours = allSignups.stream()
-                .filter(s -> s.getStatus() == SignupStatus.PARTICIPATED && s.getServiceHours() != null)
+        List<VolunteerSignup> participatedSignups = allSignups.stream()
+                .filter(s -> s.getStatus() == SignupStatus.PARTICIPATED)
+                .toList();
+
+        // totals
+        long totalActivities = allActivities.size();
+        long totalParticipations = participatedSignups.size();
+        double totalServiceHours = participatedSignups.stream()
+                .filter(s -> s.getServiceHours() != null)
                 .mapToDouble(VolunteerSignup::getServiceHours)
                 .sum();
 
-        return new VolunteerStats(totalActivities, totalParticipations, totalServiceHours);
+        // time boundaries
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thisMonthStart = now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS);
+        LocalDateTime thisYearStart = now.withDayOfYear(1).truncatedTo(ChronoUnit.DAYS);
+
+        // this month
+        long thisMonthActivities = allActivities.stream()
+                .filter(a -> !a.getStartTime().isBefore(thisMonthStart))
+                .count();
+        long thisMonthParticipations = participatedSignups.stream()
+                .filter(s -> s.getParticipatedAt() != null && !s.getParticipatedAt().isBefore(thisMonthStart))
+                .count();
+        double thisMonthServiceHours = participatedSignups.stream()
+                .filter(s -> s.getParticipatedAt() != null && !s.getParticipatedAt().isBefore(thisMonthStart)
+                        && s.getServiceHours() != null)
+                .mapToDouble(VolunteerSignup::getServiceHours)
+                .sum();
+
+        // this year
+        long thisYearActivities = allActivities.stream()
+                .filter(a -> !a.getStartTime().isBefore(thisYearStart))
+                .count();
+        long thisYearParticipations = participatedSignups.stream()
+                .filter(s -> s.getParticipatedAt() != null && !s.getParticipatedAt().isBefore(thisYearStart))
+                .count();
+        double thisYearServiceHours = participatedSignups.stream()
+                .filter(s -> s.getParticipatedAt() != null && !s.getParticipatedAt().isBefore(thisYearStart)
+                        && s.getServiceHours() != null)
+                .mapToDouble(VolunteerSignup::getServiceHours)
+                .sum();
+
+        // 12-month trend
+        List<MonthlyStats> monthlyTrends = new ArrayList<>();
+        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        for (int i = 11; i >= 0; i--) {
+            YearMonth ym = YearMonth.from(now).minusMonths(i);
+            LocalDateTime monthStart = ym.atDay(1).atStartOfDay();
+            LocalDateTime monthEnd = ym.plusMonths(1).atDay(1).atStartOfDay();
+
+            long actCount = allActivities.stream()
+                    .filter(a -> !a.getStartTime().isBefore(monthStart) && a.getStartTime().isBefore(monthEnd))
+                    .count();
+            double hours = participatedSignups.stream()
+                    .filter(s -> s.getParticipatedAt() != null
+                            && !s.getParticipatedAt().isBefore(monthStart)
+                            && s.getParticipatedAt().isBefore(monthEnd)
+                            && s.getServiceHours() != null)
+                    .mapToDouble(VolunteerSignup::getServiceHours)
+                    .sum();
+            monthlyTrends.add(new MonthlyStats(ym.format(monthFmt), actCount, hours));
+        }
+
+        // status distribution
+        Map<ActivityStatus, Long> distMap = new LinkedHashMap<>();
+        for (ActivityStatus s : ActivityStatus.values()) {
+            distMap.put(s, 0L);
+        }
+        for (VolunteerActivity a : allActivities) {
+            distMap.merge(a.getStatus(), 1L, Long::sum);
+        }
+        List<StatusCount> statusDistribution = distMap.entrySet().stream()
+                .map(e -> new StatusCount(e.getKey().name(), e.getValue()))
+                .toList();
+
+        return new VolunteerStats(
+                totalActivities, totalParticipations, totalServiceHours,
+                thisMonthActivities, thisMonthParticipations, thisMonthServiceHours,
+                thisYearActivities, thisYearParticipations, thisYearServiceHours,
+                monthlyTrends, statusDistribution);
     }
 
     // ---- helpers ----
@@ -340,11 +431,9 @@ public class VolunteerService {
             return;
         }
         if (actor.getRole() == Role.SECRETARY) {
-            // secretary can manage if they are the organizer or in the same branch
             if (activity.getOrganizerId().equals(actor.getId())) {
                 return;
             }
-            // also allow if secretary manages the same branch (check via activity organizer's branch)
             User organizer = userRepository.findById(activity.getOrganizerId()).orElse(null);
             if (organizer != null && organizer.getBranchId() != null
                     && organizer.getBranchId().equals(actor.getBranchId())) {

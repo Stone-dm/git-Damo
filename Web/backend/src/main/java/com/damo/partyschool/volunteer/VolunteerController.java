@@ -105,9 +105,11 @@ public class VolunteerController {
     @PostMapping("/activities/{id}/signup")
     public ApiResponse<VolunteerSignupView> signup(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @RequestBody(required = false) SignupRequest request) {
         requireAuth(principal);
-        return ApiResponse.ok(volunteerService.signup(principal, id));
+        String notes = request != null ? request.notes() : null;
+        return ApiResponse.ok(volunteerService.signup(principal, id, notes));
     }
 
     @DeleteMapping("/activities/{id}/signup")
