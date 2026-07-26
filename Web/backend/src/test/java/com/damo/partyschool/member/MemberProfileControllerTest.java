@@ -68,6 +68,155 @@ class MemberProfileControllerTest {
     }
 
     @Test
+    void secretaryCannotGetOtherBranchMemberProfile() throws Exception {
+        String adminToken = login("admin", "admin123");
+        long otherBranchId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/branches")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("{\"name\":\"读取外支部\",\"description\":\"t\"}"))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        long otherUserId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/users")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("""
+                                                {"username":"read_other","password":"x12345","name":"读取外党员","role":"MEMBER","branchId":%d}
+                                                """.formatted(otherBranchId)))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        String secToken = login("secretary", "sec123");
+        mockMvc.perform(get("/api/member-profiles/user/" + otherUserId)
+                        .header("Authorization", "Bearer " + secToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void secretaryFloatingList_onlyOwnBranch() throws Exception {
+        String adminToken = login("admin", "admin123");
+        String secToken = login("secretary", "sec123");
+
+        long ownBranchId = objectMapper.readTree(
+                        mockMvc.perform(get("/api/branches").header("Authorization", "Bearer " + secToken))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").get(0).path("id").asLong();
+
+        long otherBranchId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/branches")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("{\"name\":\"流动外支部\",\"description\":\"t\"}"))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        long ownFloatingUserId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/users")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("""
+                                                {"username":"float_own","password":"x12345","name":"本支部流动","role":"MEMBER","branchId":%d}
+                                                """.formatted(ownBranchId)))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        long otherFloatingUserId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/users")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("""
+                                                {"username":"float_other","password":"x12345","name":"外支部流动","role":"MEMBER","branchId":%d}
+                                                """.formatted(otherBranchId)))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/member-profiles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"userId":%d,"memberStatus":"FLOATING","floatingLocation":"本市"}
+                                """.formatted(ownFloatingUserId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/member-profiles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"userId":%d,"memberStatus":"FLOATING","floatingLocation":"外市"}
+                                """.formatted(otherFloatingUserId)))
+                .andExpect(status().isOk());
+
+        MvcResult floatingResult = mockMvc.perform(get("/api/member-profiles/floating")
+                        .header("Authorization", "Bearer " + secToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray())
+                .andReturn();
+
+        JsonNode data = objectMapper.readTree(floatingResult.getResponse().getContentAsString()).path("data");
+        for (JsonNode item : data) {
+            assertEquals(ownBranchId, item.path("branchId").asLong());
+        }
+    }
+
+    @Test
+    void secretaryListWithOtherBranchIdParam_stillOwnBranchOnly() throws Exception {
+        String adminToken = login("admin", "admin123");
+        long otherBranchId = objectMapper.readTree(
+                        mockMvc.perform(post("/api/branches")
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("{\"name\":\"参数外支部\",\"description\":\"t\"}"))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"param_other","password":"x12345","name":"参数外党员","role":"MEMBER","branchId":%d}
+                                """.formatted(otherBranchId)))
+                .andReturn();
+
+        String secToken = login("secretary", "sec123");
+        long ownBranchId = objectMapper.readTree(
+                        mockMvc.perform(get("/api/branches").header("Authorization", "Bearer " + secToken))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString())
+                .path("data").get(0).path("id").asLong();
+
+        MvcResult listResult = mockMvc.perform(get("/api/member-profiles")
+                        .param("branchId", String.valueOf(otherBranchId))
+                        .header("Authorization", "Bearer " + secToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray())
+                .andReturn();
+
+        JsonNode data = objectMapper.readTree(listResult.getResponse().getContentAsString()).path("data");
+        for (JsonNode item : data) {
+            assertEquals(ownBranchId, item.path("branchId").asLong());
+        }
+    }
+
+    @Test
     void secretaryCannotSaveOtherBranchMember() throws Exception {
         String adminToken = login("admin", "admin123");
         long otherBranchId = objectMapper.readTree(
