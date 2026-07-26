@@ -22,6 +22,7 @@ import type {
   TaskType,
   TaskView,
 } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 
 // ---- helpers ----
 
@@ -54,6 +55,9 @@ function formatDate(d: string | null): string {
 type TabKey = 'list' | 'create' | 'progress';
 
 export function TasksPage() {
+  const { user } = useAuth();
+  const isSecretary = user?.role === 'SECRETARY';
+
   // ---- tab state ----
   const [tab, setTab] = useState<TabKey>('list');
 
@@ -67,10 +71,11 @@ export function TasksPage() {
   const [createTitle, setCreateTitle] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [createTargetType, setCreateTargetType] = useState<'ALL' | 'BRANCH'>(
-    'ALL',
+    () => (user?.role === 'SECRETARY' ? 'BRANCH' : 'ALL'),
   );
   const [createTargetBranchIds, setCreateTargetBranchIds] = useState<number[]>(
-    [],
+    () =>
+      user?.role === 'SECRETARY' && user.branchId != null ? [user.branchId] : [],
   );
   const [createReferenceId, setCreateReferenceId] = useState<number | null>(
     null,
@@ -176,14 +181,22 @@ export function TasksPage() {
     setCreateSubmitting(true);
     setCreateError(null);
     setCreateOk(false);
+    const targetType = isSecretary ? 'BRANCH' : createTargetType;
+    const targetBranchIds = isSecretary
+      ? user?.branchId != null
+        ? [user.branchId]
+        : []
+      : createTargetType === 'BRANCH'
+        ? createTargetBranchIds
+        : undefined;
+
     try {
       await createTask({
         title: createTitle.trim(),
         description: createDesc.trim() || undefined,
         type: createType,
-        targetType: createTargetType,
-        targetBranchIds:
-          createTargetType === 'BRANCH' ? createTargetBranchIds : undefined,
+        targetType,
+        targetBranchIds,
         referenceId: createReferenceId ?? undefined,
         dueDate: createDueDate || undefined,
       });
@@ -191,8 +204,10 @@ export function TasksPage() {
       // reset form
       setCreateTitle('');
       setCreateDesc('');
-      setCreateTargetType('ALL');
-      setCreateTargetBranchIds([]);
+      setCreateTargetType(isSecretary ? 'BRANCH' : 'ALL');
+      setCreateTargetBranchIds(
+        isSecretary && user?.branchId != null ? [user.branchId] : [],
+      );
       setCreateReferenceId(null);
       setCreateDueDate('');
     } catch (err) {
@@ -555,26 +570,32 @@ export function TasksPage() {
             {/* 目标范围 */}
             <label>
               <span className="task-form-label">目标范围</span>
-              <div className="task-type-toggle">
-                <button
-                  type="button"
-                  className={`task-type-btn${createTargetType === 'ALL' ? ' active' : ''}`}
-                  onClick={() => setCreateTargetType('ALL')}
-                >
-                  🌐 全平台
-                </button>
-                <button
-                  type="button"
-                  className={`task-type-btn${createTargetType === 'BRANCH' ? ' active' : ''}`}
-                  onClick={() => setCreateTargetType('BRANCH')}
-                >
-                  📋 指定支部
-                </button>
-              </div>
+              {isSecretary ? (
+                <p className="muted" style={{ margin: '8px 0 0' }}>
+                  本支部
+                </p>
+              ) : (
+                <div className="task-type-toggle">
+                  <button
+                    type="button"
+                    className={`task-type-btn${createTargetType === 'ALL' ? ' active' : ''}`}
+                    onClick={() => setCreateTargetType('ALL')}
+                  >
+                    🌐 全平台
+                  </button>
+                  <button
+                    type="button"
+                    className={`task-type-btn${createTargetType === 'BRANCH' ? ' active' : ''}`}
+                    onClick={() => setCreateTargetType('BRANCH')}
+                  >
+                    📋 指定支部
+                  </button>
+                </div>
+              )}
             </label>
 
             {/* 支部选择 */}
-            {createTargetType === 'BRANCH' && (
+            {!isSecretary && createTargetType === 'BRANCH' && (
               <div className="branch-checkboxes">
                 {branches.length === 0 ? (
                   <p className="muted">暂无支部数据</p>
