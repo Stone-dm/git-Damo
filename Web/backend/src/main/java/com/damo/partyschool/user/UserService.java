@@ -133,7 +133,8 @@ public class UserService {
             case ADMIN -> {
             }
             case SECRETARY -> {
-                if (target.getRole() != Role.MEMBER
+                if (actor.getBranchId() == null
+                        || target.getRole() != Role.MEMBER
                         || !Objects.equals(actor.getBranchId(), target.getBranchId())) {
                     throw new AccessDeniedException("无权查看该用户");
                 }

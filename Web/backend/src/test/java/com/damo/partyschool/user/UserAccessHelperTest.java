@@ -37,6 +37,32 @@ class UserAccessHelperTest {
     }
 
     @Test
+    void unboundSecretaryRequireAccessibleUser_nullBranchMember_denied() {
+        User template = userRepository.findByUsername("secretary").orElseThrow();
+
+        User unboundSecretary = new User();
+        unboundSecretary.setUsername("unbound_sec");
+        unboundSecretary.setPasswordHash(template.getPasswordHash());
+        unboundSecretary.setName("未绑定书记");
+        unboundSecretary.setRole(Role.SECRETARY);
+        unboundSecretary.setBranchId(null);
+        unboundSecretary = userRepository.save(unboundSecretary);
+
+        User nullBranchMember = new User();
+        nullBranchMember.setUsername("null_branch_mem");
+        nullBranchMember.setPasswordHash(template.getPasswordHash());
+        nullBranchMember.setName("无支部党员");
+        nullBranchMember.setRole(Role.MEMBER);
+        nullBranchMember.setBranchId(null);
+        nullBranchMember = userRepository.save(nullBranchMember);
+        Long nullBranchMemberId = nullBranchMember.getId();
+
+        UserPrincipal actor = new UserPrincipal(unboundSecretary);
+        assertThrows(AccessDeniedException.class,
+                () -> userService.requireAccessibleUser(actor, nullBranchMemberId));
+    }
+
+    @Test
     void secretaryRequireAccessibleUser_otherBranch_denied() throws Exception {
         String adminToken = login("admin", "admin123");
         MvcResult createBranch = mockMvc.perform(
