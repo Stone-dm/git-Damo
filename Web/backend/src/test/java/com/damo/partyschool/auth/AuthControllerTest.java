@@ -108,6 +108,64 @@ class AuthControllerTest {
     }
 
     @Test
+    void webClientRejectsMemberLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"member","password":"mem123","client":"WEB"}
+                                """))
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    String body = result.getResponse().getContentAsString();
+                    JsonNode root = objectMapper.readTree(body);
+                    boolean unauthorized = status == 401;
+                    boolean businessFail = root.path("code").asInt(0) != 0;
+                    if (!unauthorized && !businessFail) {
+                        throw new AssertionError(
+                                "Expected WEB client to reject member, got status="
+                                        + status
+                                        + " body="
+                                        + body);
+                    }
+                });
+    }
+
+    @Test
+    void mobileClientRejectsAdminLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"admin","password":"admin123","client":"MOBILE"}
+                                """))
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    String body = result.getResponse().getContentAsString();
+                    JsonNode root = objectMapper.readTree(body);
+                    boolean unauthorized = status == 401;
+                    boolean businessFail = root.path("code").asInt(0) != 0;
+                    if (!unauthorized && !businessFail) {
+                        throw new AssertionError(
+                                "Expected MOBILE client to reject admin, got status="
+                                        + status
+                                        + " body="
+                                        + body);
+                    }
+                });
+    }
+
+    @Test
+    void mobileClientAllowsMemberLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"member","password":"mem123","client":"MOBILE"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.user.role").value("MEMBER"));
+    }
+
+    @Test
     void meWithoutTokenReturnsJsonUnauthorized() throws Exception {
         mockMvc.perform(get("/api/me"))
                 .andExpect(status().isUnauthorized())

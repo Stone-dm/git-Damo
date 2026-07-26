@@ -23,7 +23,8 @@ public class AuthController {
 
     @PostMapping("/auth/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.ok(authService.login(request.username(), request.password()));
+        return ApiResponse.ok(
+                authService.login(request.username(), request.password(), request.client()));
     }
 
     @GetMapping("/me")

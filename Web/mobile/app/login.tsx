@@ -23,7 +23,7 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && user) {
-    return <Redirect href="/(member)/learning" />;
+    return <Redirect href="/(member)/home" />;
   }
 
   async function onSubmit() {
@@ -31,7 +31,7 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       await login(username.trim(), password);
-      router.replace('/(member)/learning');
+      router.replace('/(member)/home');
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -86,7 +86,7 @@ export default function LoginScreen() {
         </Pressable>
 
         <Text style={styles.hint}>
-          种子账号：admin/admin123 · secretary/sec123 · member/mem123
+          党员端专用。演示账号：member/mem123（其他党员如 zhangwei/mem123）
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.primary,
     marginBottom: 4,
   },
   sub: {

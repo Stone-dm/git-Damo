@@ -1,18 +1,14 @@
-import { Redirect, Tabs } from 'expo-router';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-  type ColorValue,
-} from 'react-native';
+import { Redirect, Stack } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { HeaderBackButton } from '@/components/navigation/HeaderBackButton';
 import { useAuth } from '@/src/auth/AuthContext';
+import { LearningLocalProvider } from '@/src/hooks/useLearningLocalState';
 import { colors } from '@/src/theme';
 
-function TabLabel({ label, color }: { label: string; color: ColorValue }) {
-  return <Text style={{ color, fontSize: 12 }}>{label}</Text>;
-}
-
+/**
+ * 党员区根布局：Stack 包裹 Tab + 二级页
+ * 二级页（按钮跳转）统一显示「返回」，从哪来回哪去
+ */
 export default function MemberLayout() {
   const { user, loading } = useAuth();
 
@@ -24,52 +20,30 @@ export default function MemberLayout() {
     );
   }
 
-  if (!user) {
+  if (!user || user.role !== 'MEMBER') {
     return <Redirect href="/login" />;
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        headerStyle: { backgroundColor: colors.card },
-        headerTitleStyle: { color: colors.text, fontWeight: '600' },
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="learning"
-        options={{
-          title: '学习',
-          tabBarLabel: ({ color }) => <TabLabel label="学习" color={color} />,
+    <LearningLocalProvider>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.card },
+          headerTitleStyle: { color: colors.text, fontWeight: '600' },
+          headerTintColor: colors.primary,
+          headerLeft: () => <HeaderBackButton />,
         }}
-      />
-      <Tabs.Screen
-        name="recommend"
-        options={{
-          title: '推荐',
-          tabBarLabel: ({ color }) => <TabLabel label="推荐" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="assistant"
-        options={{
-          title: '助手',
-          tabBarLabel: ({ color }) => <TabLabel label="助手" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="me"
-        options={{
-          title: '我的',
-          tabBarLabel: ({ color }) => <TabLabel label="我的" color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="multi" options={{ headerShown: false }} />
+        <Stack.Screen name="loop" options={{ headerShown: false }} />
+        <Stack.Screen name="task" options={{ headerShown: false }} />
+        <Stack.Screen name="learning" options={{ headerShown: false }} />
+        <Stack.Screen name="explore" options={{ title: '探索' }} />
+        <Stack.Screen name="duty" options={{ title: '任务与考试' }} />
+        <Stack.Screen name="notices" options={{ title: '通知' }} />
+      </Stack>
+    </LearningLocalProvider>
   );
 }
 
