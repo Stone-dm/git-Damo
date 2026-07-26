@@ -70,7 +70,7 @@ public class DevelopmentRecordService {
                 .collect(Collectors.toMap(User::getId, u -> u));
         Stream<DevelopmentRecord> stream = records.stream()
                 .filter(r -> userMap.containsKey(r.getUserId()));
-        if (actor.getRole() != Role.ADMIN) {
+        if (actor.getRole() == Role.SECRETARY) {
             Long bid = actor.getBranchId();
             if (bid == null) {
                 return List.of();
