@@ -1,7 +1,16 @@
-# 默认只起 MySQL（宿主机 3307，避免和本机已有 3306 冲突）。
-# 若本机已有 Milvus（19530），不要起 milvus 相关服务。
-# 需要本仓库自带的完整向量栈时再执行：
+# ===== Party School — Docker Compose =====
+#
+# 一键启动（MySQL + Agent + Backend + Frontend）：
+#   docker compose up -d
+#
+# 需要完整向量栈时（额外启动 etcd + minio + milvus）：
 #   docker compose --profile milvus up -d
+#
+# 首次使用请先创建 .env：
+#   cp .env.example .env
+#   # 编辑 .env 填写 DEEPSEEK_API_KEY 等
+#
+# 若本机已有 Milvus (19530)，设置 MILVUS_HOST=host.docker.internal 且不要加 --profile milvus
 
 services:
   mysql:
@@ -70,8 +79,8 @@ services:
     build: ./agent
     container_name: party-agent
     environment:
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
+      - MILVUS_HOST=${MILVUS_HOST:-milvus}
+      - MILVUS_PORT=${MILVUS_PORT:-19530}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
@@ -82,8 +91,15 @@ services:
       - AGENT_SHARED_TOKEN=${AGENT_SHARED_TOKEN:-}
     ports:
       - "8000:8000"
-    depends_on:
-      - milvus
+    restart: unless-stopped
+    # Agent 不硬依赖 milvus — Milvus 不可达时自动降级（伪向量/降级文案）
+    # 需要完整向量检索时：docker compose --profile milvus up -d
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   backend:
     build: ./backend
@@ -99,15 +115,23 @@ services:
       - AGENT_SHARED_TOKEN=${AGENT_SHARED_TOKEN:-}
     ports:
       - "8080:8080"
+    restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   frontend:
     build: ./frontend
     container_name: party-frontend
     ports:
       - "80:80"
+    restart: unless-stopped
     depends_on:
       - backend
 

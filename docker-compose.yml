@@ -1,0 +1,16 @@
+# ===== Party School — 根目录便捷入口 =====
+#
+# 包含 Web/docker-compose.yml 中的所有服务。
+#
+# 一键启动：
+#   1. cp Web/.env.example .env   （编辑 .env 填写 DEEPSEEK_API_KEY）
+#   2. docker compose up -d
+#
+# 完整向量栈：
+#   docker compose --profile milvus up -d
+#
+# 注意：Docker Compose 从 v2.20 开始支持 include 指令。
+# 旧版本请 cd Web && docker compose up -d
+
+include:
+  - path: Web/docker-compose.yml
