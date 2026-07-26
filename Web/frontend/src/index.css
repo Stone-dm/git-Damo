@@ -81,24 +81,6 @@ textarea {
   mix-blend-mode: normal;
 }
 
-.login-huazhu {
-  position: absolute;
-  z-index: 1;
-  left: clamp(-280px, -20vw, -160px);
-  bottom: clamp(-160px, -18vh, -90px);
-  height: 130vh;
-  width: auto;
-  max-width: none;
-  object-fit: contain;
-  object-position: left bottom;
-  pointer-events: none;
-  user-select: none;
-  mix-blend-mode: normal;
-  opacity: 1;
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.28));
-  animation: login-huazhu-in 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 .login-topnav {
   position: absolute;
   z-index: 5;
@@ -605,17 +587,6 @@ textarea {
   }
 }
 
-@keyframes login-huazhu-in {
-  from {
-    opacity: 0;
-    transform: translateX(-48px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
 @keyframes login-notice-in {
   from {
     opacity: 0;
@@ -628,13 +599,6 @@ textarea {
 }
 
 @media (max-width: 900px) {
-  .login-huazhu {
-    left: -140px;
-    bottom: -100px;
-    height: 95vh;
-    opacity: 1;
-  }
-
   .login-topnav {
     display: none;
   }
