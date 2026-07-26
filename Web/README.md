@@ -6,46 +6,33 @@
 
 按下列顺序启动。前后端与 Agent 依赖基础设施；前端/移动端依赖 Backend `:8080`。
 
-### 1. Docker Compose（默认只起 MySQL）
+### 1. Docker 一键启动（推荐）
 
-本机若 **已有 Milvus（19530）** 或 **已有 MySQL（3306）**，不要用旧的一键全起，按下面做。
+默认一起启动：**MySQL + Agent + Backend + Frontend**（**不会**删掉 / 跳过 MySQL）。
 
 ```bash
 cd Web
-cp .env.example .env   # 按需填写 DEEPSEEK_API_KEY 等（见下文）
-
-# 先清掉之前失败/冲突的容器
+cp .env.example .env   # 按需填写 DEEPSEEK_API_KEY 等
 docker compose down
-
-# 默认只起项目 MySQL（映射到宿主机 3307，避开本机 3306）
-docker compose up -d mysql
+docker compose up -d --build
 docker compose ps
 ```
 
-`.env` 里把端口改成 Docker MySQL：
-
-```env
-MYSQL_HOST=localhost
-MYSQL_PORT=3307
-MYSQL_DB=party_school
-MYSQL_USER=party
-MYSQL_PASSWORD=party123
-MILVUS_HOST=localhost
-MILVUS_PORT=19530
-```
-
-启动 Backend / Agent 前请保证环境变量或系统里 `MYSQL_PORT=3307`（或写进你启动用的 `.env`）。
+也可在仓库根目录执行同样的 `docker compose up -d --build`（根目录 `docker-compose.yml` 会 include `Web/`）。
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| MySQL（本仓库 Docker） | `localhost:3307` | 容器内仍是 3306；库名 `party_school` |
-| Milvus（用你已有的） | `localhost:19530` | 不要再起 compose 里的 milvus |
-| MinIO Console | — | 仅 `--profile milvus` 时才起 |
+| Frontend | `http://localhost` | nginx 反代 `/api` |
+| Backend | `http://localhost:8080` | Spring Boot |
+| Agent | `http://localhost:8000` | FastAPI |
+| MySQL | `localhost:3307` | 容器内仍是 3306；库名 `party_school` |
+| Milvus（本机已有） | `localhost:19530` | Agent 默认经 `host.docker.internal` 连接 |
 
 若本机 **没有** Milvus，才需要完整向量栈：
 
 ```bash
-docker compose --profile milvus up -d
+# .env 里把 MILVUS_HOST 改成 milvus
+docker compose --profile milvus up -d --build
 ```
 
 停止：
@@ -55,7 +42,13 @@ docker compose down        # 保留数据卷
 docker compose down -v     # 清空数据卷
 ```
 
-### 2. Agent（venv + uvicorn，端口 8000）
+仅想本地起 MySQL、其余服务本机跑时：
+
+```bash
+docker compose up -d mysql
+```
+
+### 2. Agent（本机 venv + uvicorn，端口 8000）
 
 ```bash
 cd Web/agent
