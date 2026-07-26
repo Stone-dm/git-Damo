@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,5 +29,15 @@ public class ExamController {
             throw new AuthException("Unauthorized");
         }
         return ApiResponse.ok(examService.list(principal));
+    }
+
+    @PostMapping
+    public ApiResponse<ExamView> create(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody ExamRequest request) {
+        if (principal == null) {
+            throw new AuthException("Unauthorized");
+        }
+        return ApiResponse.ok(examService.createExam(principal, request));
     }
 }

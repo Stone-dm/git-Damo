@@ -119,16 +119,16 @@ export function BranchesPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>序号</th>
                   <th>名称</th>
                   <th>描述</th>
                   {canWrite ? <th /> : null}
                 </tr>
               </thead>
               <tbody>
-                {items.map((b) => (
+                {items.map((b, i) => (
                   <tr key={b.id}>
-                    <td>{b.id}</td>
+                    <td>{i + 1}</td>
                     <td>{b.name}</td>
                     <td>{b.description || '—'}</td>
                     {canWrite ? (

@@ -7,15 +7,13 @@ export interface MenuItem {
 }
 
 export const MENU_ITEMS: MenuItem[] = [
-  { path: '/', label: '首页', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
-  { path: '/workbench', label: '工作台', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
+  { path: '/', label: '首页', roles: ['ADMIN', 'SECRETARY'] },
+  { path: '/workbench', label: '工作台', roles: ['ADMIN', 'SECRETARY'] },
   { path: '/users', label: '用户管理', roles: ['ADMIN', 'SECRETARY'] },
   { path: '/branches', label: '支部管理', roles: ['ADMIN'] },
-  { path: '/learning', label: '学习资料', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
-  { path: '/exams', label: '考试管理', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
-  { path: '/knowledge', label: '知识库', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
-  { path: '/recommend', label: '智能推荐', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
-  { path: '/assistant', label: '学习助手', roles: ['ADMIN', 'SECRETARY', 'MEMBER'] },
+  { path: '/resource-center', label: '资源中心', roles: ['ADMIN', 'SECRETARY'] },
+  { path: '/tasks', label: '任务中心', roles: ['ADMIN', 'SECRETARY'] },
+  { path: '/knowledge', label: '知识库', roles: ['ADMIN', 'SECRETARY'] },
 ];
 
 export function menusForRole(role: Role): MenuItem[] {

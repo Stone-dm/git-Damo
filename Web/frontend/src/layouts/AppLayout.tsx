@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { AiAssistant } from '../components/AiAssistant';
 import { menusForRole, ROLE_LABEL } from './menu';
 
 export function AppLayout() {
@@ -42,6 +43,8 @@ export function AppLayout() {
       <main className={`content${isHome ? '' : ' content-page'}`}>
         <Outlet />
       </main>
+
+      <AiAssistant />
     </div>
   );
 }

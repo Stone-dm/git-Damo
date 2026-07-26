@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { ArchivePage } from './workbench/ArchivePage';
+import { FloatingMembersPage } from './workbench/FloatingMembersPage';
+import { TrainingPage } from './workbench/TrainingPage';
 import { PlaceholderPage } from './workbench/PlaceholderPage';
 
 interface SubPage {
@@ -29,7 +32,7 @@ const WORKBENCH_NAV: NavSection[] = [
     label: '组织生活',
     icon: '组',
     pages: [
-      { id: 'tasks', label: '人物管理' },
+      { id: 'tasks', label: '任务管理' },
       { id: 'materials', label: '材料归档' },
     ],
   },
@@ -152,6 +155,12 @@ export function DashboardPage() {
               <span style={{ color: '#4a90d9', fontSize: '1.2rem' }}>📊 数据可视化大屏区域</span>
             </div>
           </div>
+        ) : activeSection === 'member' && activePage === 'archive' ? (
+          <ArchivePage />
+        ) : activeSection === 'member' && activePage === 'floating' ? (
+          <FloatingMembersPage />
+        ) : activeSection === 'member' && activePage === 'training' ? (
+          <TrainingPage />
         ) : activeSectionDef && activePageDef ? (
           <PlaceholderPage
             key={`${activeSection}/${activePage}`}

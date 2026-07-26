@@ -1,15 +1,13 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AppLayout } from './layouts/AppLayout';
-import { AssistantPage } from './pages/AssistantPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { ExamsPage } from './pages/ExamsPage';
+import { TasksPage } from './pages/TasksPage';
 import { HomePage } from './pages/HomePage';
 import { KnowledgePage } from './pages/KnowledgePage';
-import { LearningPage } from './pages/LearningPage';
 import { LoginPage } from './pages/LoginPage';
-import { RecommendPage } from './pages/RecommendPage';
+import { ResourceCenterPage } from './pages/ResourceCenterPage';
 import { UsersPage } from './pages/UsersPage';
 import { SilkTransitionProvider } from './transition/SilkTransition';
 
@@ -39,11 +37,10 @@ export default function App() {
               <Route path="workbench" element={<DashboardPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="branches" element={<BranchesPage />} />
-              <Route path="learning" element={<LearningPage />} />
-              <Route path="exams" element={<ExamsPage />} />
+              <Route path="resource-center" element={<ResourceCenterPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="exams" element={<Navigate to="/tasks" replace />} />
               <Route path="knowledge" element={<KnowledgePage />} />
-              <Route path="recommend" element={<RecommendPage />} />
-              <Route path="assistant" element={<AssistantPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

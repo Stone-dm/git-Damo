@@ -127,6 +127,10 @@ services:
       - JWT_SECRET=${JWT_SECRET:-change-me-to-a-long-random-string}
       - AGENT_BASE_URL=http://agent:8000
       - AGENT_SHARED_TOKEN=${AGENT_SHARED_TOKEN:-}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=partyschool
     ports:
       - "8080:8080"
     restart: unless-stopped
