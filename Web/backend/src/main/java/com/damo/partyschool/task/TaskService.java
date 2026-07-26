@@ -13,7 +13,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,13 +47,22 @@ public class TaskService {
         task.setDescription(request.description());
         task.setType(request.type());
         task.setStatus(TaskStatus.DRAFT);
-        task.setTargetType(request.targetType());
 
-        if ("BRANCH".equals(request.targetType())
-                && request.targetBranchIds() != null
-                && !request.targetBranchIds().isEmpty()) {
+        String targetType = request.targetType();
+        List<Long> targetBranchIds = request.targetBranchIds();
+
+        if (actor.getRole() == Role.SECRETARY) {
+            if (actor.getBranchId() == null) {
+                throw new AccessDeniedException("书记未绑定支部");
+            }
+            targetType = "BRANCH";
+            targetBranchIds = List.of(actor.getBranchId());
+        }
+
+        task.setTargetType(targetType);
+        if ("BRANCH".equals(targetType) && targetBranchIds != null && !targetBranchIds.isEmpty()) {
             task.setTargetBranchIds(
-                    request.targetBranchIds().stream()
+                    targetBranchIds.stream()
                             .map(String::valueOf)
                             .collect(Collectors.joining(",")));
         }
@@ -94,6 +105,7 @@ public class TaskService {
     public TaskView dispatchTask(UserPrincipal actor, Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertCanMutateTask(actor, task);
 
         if (task.getStatus() != TaskStatus.DRAFT) {
             throw new IllegalArgumentException("只能派发草稿状态的任务");
@@ -120,6 +132,7 @@ public class TaskService {
     public TaskView closeTask(UserPrincipal actor, Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertCanMutateTask(actor, task);
 
         if (task.getStatus() != TaskStatus.ACTIVE) {
             throw new IllegalArgumentException("只能关闭进行中的任务");
@@ -134,6 +147,7 @@ public class TaskService {
     public void deleteTask(UserPrincipal actor, Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertCanMutateTask(actor, task);
 
         if (task.getStatus() != TaskStatus.CLOSED) {
             throw new IllegalArgumentException("只能删除已关闭的任务");
@@ -150,8 +164,9 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public List<TaskProgressView> getTaskProgress(UserPrincipal actor, Long taskId) {
-        taskRepository.findById(taskId)
+        Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertTaskVisible(actor, task);
 
         List<TaskProgress> progressList = progressRepository.findByTaskId(taskId);
 
@@ -161,7 +176,7 @@ public class TaskService {
         Map<Long, Branch> branchMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, b -> b));
 
-        return progressList.stream()
+        List<TaskProgressView> views = progressList.stream()
                 .map(p -> {
                     User user = userMap.get(p.getUserId());
                     String userName = user != null ? user.getName() : "未知用户";
@@ -180,12 +195,23 @@ public class TaskService {
                             p.getCompletedAt());
                 })
                 .toList();
+
+        if (actor.getRole() == Role.SECRETARY) {
+            if (actor.getBranchId() == null) {
+                return List.of();
+            }
+            return views.stream()
+                    .filter(v -> Objects.equals(v.branchId(), actor.getBranchId()))
+                    .toList();
+        }
+        return views;
     }
 
     @Transactional(readOnly = true)
     public List<BranchCompletionView> getBranchCompletion(UserPrincipal actor, Long taskId) {
-        taskRepository.findById(taskId)
+        Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        assertTaskVisible(actor, task);
 
         List<TaskProgress> progressList = progressRepository.findByTaskId(taskId);
 
@@ -225,10 +251,58 @@ public class TaskService {
 
         // sort by branch name
         result.sort((a, b) -> a.branchName().compareTo(b.branchName()));
+
+        if (actor.getRole() == Role.SECRETARY) {
+            if (actor.getBranchId() == null) {
+                return List.of();
+            }
+            return result.stream()
+                    .filter(v -> Objects.equals(v.branchId(), actor.getBranchId()))
+                    .toList();
+        }
         return result;
     }
 
     // ---- helpers ----
+
+    private void assertTaskVisible(UserPrincipal actor, Task task) {
+        if (actor.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (actor.getBranchId() == null) {
+            throw new AccessDeniedException("无权查看该任务");
+        }
+        if ("ALL".equals(task.getTargetType())) {
+            return;
+        }
+        String branchIdStr = String.valueOf(actor.getBranchId());
+        if (task.getTargetBranchIds() != null
+                && Arrays.asList(task.getTargetBranchIds().split(",")).contains(branchIdStr)) {
+            return;
+        }
+        throw new AccessDeniedException("无权查看该任务");
+    }
+
+    /** 书记仅可变更「仅指向本支部」的 BRANCH 任务；不可变更 ALL 或含外支部任务 */
+    private void assertCanMutateTask(UserPrincipal actor, Task task) {
+        if (actor.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (actor.getRole() != Role.SECRETARY || actor.getBranchId() == null) {
+            throw new AccessDeniedException("无权操作该任务");
+        }
+        if (!"BRANCH".equals(task.getTargetType()) || task.getTargetBranchIds() == null) {
+            throw new AccessDeniedException("书记仅可管理本支部任务");
+        }
+        List<String> ids = Arrays.stream(task.getTargetBranchIds().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        String own = String.valueOf(actor.getBranchId());
+        if (ids.size() != 1 || !ids.contains(own)) {
+            throw new AccessDeniedException("书记仅可管理本支部任务");
+        }
+    }
 
     private List<User> resolveTargetUsers(Task task) {
         if ("ALL".equals(task.getTargetType())) {
