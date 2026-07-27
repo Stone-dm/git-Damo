@@ -495,3 +495,83 @@ export interface VolunteerStats {
   monthlyTrends: MonthlyStats[];
   statusDistribution: StatusCount[];
 }
+
+// ---- Party dues management ----
+
+export type PartyDuesMemberType =
+  | 'EMPLOYED'
+  | 'RETIRED'
+  | 'STUDENT'
+  | 'HARDSHIP';
+
+export type PartyDuesStandardStatus = 'ACTIVE' | 'WAIVED';
+
+export type PartyDuesRecordStatus = 'PAID' | 'UNPAID' | 'WAIVED';
+
+export interface PartyDuesStandardView {
+  id: number;
+  userId: number;
+  userName: string;
+  branchId: number;
+  branchName: string;
+  memberType: PartyDuesMemberType;
+  monthlyIncome: number;
+  rate: number;
+  monthlyAmount: number;
+  effectiveDate: string;
+  status: PartyDuesStandardStatus;
+  notes: string | null;
+}
+
+export interface PartyDuesStandardRequest {
+  userId: number;
+  branchId?: number | null;
+  memberType: PartyDuesMemberType;
+  monthlyIncome: number;
+  effectiveDate?: string;
+  status?: PartyDuesStandardStatus;
+  notes?: string;
+}
+
+export interface PartyDuesRecordView {
+  id: number;
+  userId: number;
+  userName: string;
+  branchId: number;
+  branchName: string;
+  yearMonth: string;
+  dueAmount: number;
+  paidAmount: number;
+  status: PartyDuesRecordStatus;
+  paidAt: string | null;
+  notes: string | null;
+}
+
+export interface PartyDuesPayRequest {
+  paidAmount: number;
+  notes?: string;
+}
+
+export interface PartyDuesBatchPayRequest {
+  recordIds: number[];
+  paidAmount: number;
+  notes?: string;
+}
+
+export interface PartyDuesBatchRemindRequest {
+  recordIds: number[];
+}
+
+export interface PartyDuesStatsView {
+  yearMonth: string;
+  totalDueAmount: number;
+  totalPaidAmount: number;
+  paymentRate: number;
+  unpaidCount: number;
+}
+
+export interface PartyDuesImportResult {
+  importedCount: number;
+  errors: string[];
+  standards: PartyDuesStandardView[];
+}

@@ -5,7 +5,9 @@ import { FloatingMembersPage } from './workbench/FloatingMembersPage';
 import { TrainingPage } from './workbench/TrainingPage';
 import { WorkbenchTasksPage } from './workbench/TasksPage';
 import { PlaceholderPage } from './workbench/PlaceholderPage';
+import { PartyDuesPage } from './workbench/PartyDuesPage';
 import { VolunteerPage } from './workbench/VolunteerPage';
+import { ResourceLibraryPage } from './admin/ResourceLibraryPage';
 
 interface SubPage {
   id: string;
@@ -37,6 +39,14 @@ const WORKBENCH_NAV: NavSection[] = [
     pages: [
       { id: 'tasks', label: '任务管理' },
       { id: 'materials', label: '材料归档' },
+    ],
+  },
+  {
+    id: 'learning-resource',
+    label: '学习资源',
+    icon: '学',
+    pages: [
+      { id: 'resource-library', label: '资源库管理' },
     ],
   },
   {
@@ -168,8 +178,12 @@ export function DashboardPage() {
           <WorkbenchTasksPage />
         ) : activeSection === 'org-life' && activePage === 'materials' ? (
           <ArchiveMaterialPage />
+        ) : activeSection === 'learning-resource' && activePage === 'resource-library' ? (
+          <ResourceLibraryPage />
         ) : activeSection === 'party-work' && activePage === 'volunteer' ? (
           <VolunteerPage />
+        ) : activeSection === 'party-work' && activePage === 'dues' ? (
+          <PartyDuesPage />
         ) : activeSectionDef && activePageDef ? (
           <PlaceholderPage
             key={`${activeSection}/${activePage}`}
